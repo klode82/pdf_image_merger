@@ -74,6 +74,27 @@ backend di visualizzazione di Qt su X11 (utile sui sistemi Wayland):
 QT_QPA_PLATFORM=xcb python main.py
 ```
 
+### Windows: la finestra si blocca (rondella di caricamento) dopo averla spostata
+
+Causa individuata: pywebview espone a JS le funzioni Python leggendo per
+riflessione **tutti** gli attributi dell'oggetto `js_api` — nel nostro caso
+`Api`, che tiene un riferimento alla finestra stessa (`self.window`). Su
+Windows quella scansione può proseguire dentro `window.native` (il controllo
+WinForms/WebView2 vero e proprio) e finire in un loop infinito su
+`System.Drawing.Rectangle.Empty` (visibile in console come
+`AccessibilityObject.Bounds.Empty.Empty.Empty...` — bug noto e ancora aperto
+di pywebview, [issue #1815](https://github.com/r0x0r/pywebview/issues/1815)).
+Il problema si nota spostando la finestra perché WebView2 può generare un
+evento "NavigationCompleted" spurio in quel momento, che rilancia la
+scansione da capo.
+
+Già corretto in `api.py`: `set_window()` marca la finestra con
+`_serializable = False`, l'escape hatch che pywebview stesso offre per
+escludere un oggetto dalla scansione — verificato riproducendo la scansione
+reale di pywebview contro la nostra classe `Api` (nessun loop, tutti i
+metodi comunque esposti correttamente a JS). Se il problema persiste dopo
+aver aggiornato `api.py`, fammelo sapere.
+
 ## Build standalone (AppImage / .exe)
 
 Un eseguibile distribuibile che non richiede Python installato su chi lo usa,

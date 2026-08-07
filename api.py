@@ -38,6 +38,19 @@ class Api:
         self._thumb_cache: dict[str, str | None] = {}
 
     def set_window(self, window: webview.Window) -> None:
+        # pywebview reflectively walks every attribute of the js_api object
+        # (this Api instance) to auto-expose its methods to JS — see
+        # inject_pywebview() in webview/util.py. Without this marker it
+        # happily recurses from `self.window` into `window.native` (the raw
+        # WinForms/WebView2 control) and, on Windows, gets stuck in infinite
+        # recursion on System.Drawing.Rectangle.Empty — reflected as
+        # "AccessibilityObject.Bounds.Empty.Empty.Empty..." in the console,
+        # and can freeze the UI thread since re-injection runs on every
+        # WebView2 NavigationCompleted event (which a window move can
+        # spuriously retrigger). Confirmed upstream bug, still open:
+        # github.com/r0x0r/pywebview/issues/1815. `_serializable = False` is
+        # pywebview's own documented escape hatch for exactly this case.
+        window._serializable = False
         self.window = window
 
     # ------------------------------------------------------------------
