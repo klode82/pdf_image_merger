@@ -46,7 +46,13 @@ def _base_dir() -> Path:
 
 BASE_DIR = _base_dir()
 INDEX_HTML = BASE_DIR / "frontend" / "index.html"
-ICON_PATH = BASE_DIR / "assets" / "icon.png"
+# Windows' window-icon path goes through .NET's System.Drawing.Icon, which
+# only accepts an actual .ico file — handing it a .png raises
+# "argument 'picture' must be an image that can be used as an Icon."
+# (confirmed in pywebview's own webview/platforms/winforms.py: it does
+# `self.Icon = Icon(_state['icon'])` with no format conversion). Qt (Linux)
+# and Cocoa (macOS) both accept .png directly via their own icon classes.
+ICON_PATH = BASE_DIR / "assets" / ("icon.ico" if platform.system() == "Windows" else "icon.png")
 
 WINDOW_TITLE = "PDFImageMerger"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif"}
