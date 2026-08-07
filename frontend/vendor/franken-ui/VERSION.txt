@@ -1,0 +1,1 @@
+franken-ui v2.1.2 (https://franken-ui.dev) - vendored 2026-08-07 for fully offline use

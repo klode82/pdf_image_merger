@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="it" class="uk-theme-zinc">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PDFImageMerger</title>
+<link rel="stylesheet" href="vendor/franken-ui/core.min.css" />
+<link rel="stylesheet" href="vendor/franken-ui/utilities.min.css" />
+<script type="module" src="vendor/franken-ui/core.iife.js"></script>
+<script type="module" src="vendor/franken-ui/icon.iife.js"></script>
+<style>
+  /*
+   * The vendored utilities.min.css is FrankenUI's own prebuilt (purged)
+   * Tailwind bundle, not a full JIT build — a handful of common utilities
+   * used by this app aren't in it. Defining them here keeps the HTML using
+   * plain, familiar utility-class names without depending on the CDN.
+   */
+  .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pointer-events-none { pointer-events: none; }
+  .transition-colors { transition-property: color, background-color, border-color; transition-duration: 150ms; }
+  .backdrop-blur-sm { backdrop-filter: blur(4px); }
+  .z-50 { z-index: 50; }
+  .shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / .3), 0 4px 6px -4px rgb(0 0 0 / .3); }
+  .bg-primary\/10 { background-color: hsl(var(--primary) / .1); }
+  .bg-muted\/40 { background-color: hsl(var(--muted) / .4); }
+
+  html, body { height: 100%; }
+  body { -webkit-user-select: none; user-select: none; }
+  input, textarea { -webkit-user-select: text; user-select: text; }
+  #file-list img { object-fit: cover; }
+  .drag-handle { cursor: grab; }
+  .uk-sortable-drag { opacity: .85; }
+  #dropzone.is-dragover { border-color: hsl(var(--primary)); background-color: hsl(var(--primary) / 0.06); }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
+  .orient-btn[aria-pressed="true"] { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .file-row.is-processing { opacity: .55; }
+  #drag-overlay .uk-card { border-color: hsl(var(--primary)); }
+  #app-main { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+  @media (min-width: 768px) { #app-main { grid-template-columns: 1.3fr 1fr; } }
+</style>
+</head>
+<body class="bg-background text-foreground flex h-screen flex-col overflow-hidden">
+
+  <header class="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+    <div class="flex items-center gap-2">
+      <uk-icon icon="layers" class="text-primary"></uk-icon>
+      <h1 class="text-lg font-semibold tracking-tight">PDFImageMerger</h1>
+    </div>
+    <button id="btn-theme" class="uk-btn uk-btn-ghost uk-btn-icon" title="Cambia tema" type="button">
+      <uk-icon icon="moon" id="icon-theme"></uk-icon>
+    </button>
+  </header>
+
+  <main id="app-main" class="min-h-0 flex-1 overflow-hidden p-4">
+
+    <!-- LEFT COLUMN: source images -->
+    <section class="flex min-h-0 flex-col gap-3">
+      <div id="dropzone" class="rounded-lg border-2 border-dashed border-border p-4 text-center transition-colors">
+        <uk-icon icon="image-plus" size="28" class="mx-auto mb-2 text-muted-foreground"></uk-icon>
+        <p class="text-sm text-muted-foreground">Trascina qui immagini o una cartella, oppure</p>
+        <div class="mt-3 flex justify-center gap-2">
+          <button id="btn-pick-folder" class="uk-btn uk-btn-primary uk-btn-sm" type="button">
+            <uk-icon icon="folder-open" size="16" class="mr-1"></uk-icon>Scegli cartella
+          </button>
+          <button id="btn-pick-files" class="uk-btn uk-btn-default uk-btn-sm" type="button">
+            <uk-icon icon="image" size="16" class="mr-1"></uk-icon>Scegli immagini
+          </button>
+        </div>
+      </div>
+
+      <div id="scan-progress-wrap" class="hidden flex-col gap-1">
+        <progress id="scan-progress" class="uk-progress" value="0" max="100"></progress>
+        <p id="scan-progress-label" class="text-center text-xs text-muted-foreground"></p>
+      </div>
+
+      <div class="uk-card flex min-h-0 flex-1 flex-col">
+        <div class="uk-card-header flex items-center justify-between py-2">
+          <h3 class="uk-card-title text-sm">File da unire (<span id="file-count">0</span>)</h3>
+          <button id="btn-clear" class="uk-btn uk-btn-ghost uk-btn-sm text-destructive" type="button">
+            <uk-icon icon="trash-2" size="14" class="mr-1"></uk-icon>Svuota
+          </button>
+        </div>
+        <div class="uk-card-body min-h-0 flex-1 overflow-y-auto p-2">
+          <ul id="file-list" uk-sortable="handle: .drag-handle" class="flex flex-col gap-1"></ul>
+          <p id="empty-hint" class="py-10 text-center text-sm text-muted-foreground">
+            Nessuna immagine selezionata
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: settings -->
+    <section class="uk-card flex min-h-0 flex-col">
+      <div class="uk-card-header py-2">
+        <h3 class="uk-card-title text-sm">Impostazioni PDF</h3>
+      </div>
+
+      <div class="uk-card-body flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-3">
+
+        <div class="flex items-start gap-3 rounded-md border border-border p-3">
+          <input id="chk-original-quality" type="checkbox" class="uk-toggle-switch mt-1 shrink-0" />
+          <label for="chk-original-quality" class="text-sm">
+            <span class="font-medium">Non modificare le immagini</span>
+            <p class="text-xs text-muted-foreground">
+              Nessun ridimensionamento e nessuna compressione: ogni pagina avrà le
+              dimensioni originali dell'immagine e i pixel resteranno identici
+              (file più pesante).
+            </p>
+          </label>
+        </div>
+
+        <div id="format-field">
+          <label class="uk-form-label" for="sel-format">Formato pagina</label>
+          <select id="sel-format" class="uk-select mt-1">
+            <option value="auto">Adatta all'immagine (nessun ridimensionamento forzato)</option>
+            <option value="A4" selected>A4</option>
+            <option value="Letter">Letter (US)</option>
+            <option value="Legal">Legal (US)</option>
+            <option value="A5">A5</option>
+          </select>
+        </div>
+
+        <div id="orientation-field">
+          <label class="uk-form-label">Orientamento</label>
+          <div class="mt-1 flex gap-2" id="orientation-group">
+            <button type="button" data-value="portrait" class="orient-btn uk-btn uk-btn-default flex-1" aria-pressed="true">
+              <uk-icon icon="rectangle-vertical" size="16" class="mr-1"></uk-icon>Verticale
+            </button>
+            <button type="button" data-value="landscape" class="orient-btn uk-btn uk-btn-default flex-1" aria-pressed="false">
+              <uk-icon icon="rectangle-horizontal" size="16" class="mr-1"></uk-icon>Orizzontale
+            </button>
+          </div>
+        </div>
+
+        <div id="resolution-quality-field" class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="uk-form-label" for="sel-dpi">Risoluzione</label>
+            <select id="sel-dpi" class="uk-select mt-1">
+              <option value="72">72 DPI (schermo)</option>
+              <option value="150" selected>150 DPI (buona)</option>
+              <option value="300">300 DPI (stampa)</option>
+              <option value="600">600 DPI (alta)</option>
+            </select>
+          </div>
+          <div>
+            <label class="uk-form-label" for="sel-quality">Compressione</label>
+            <select id="sel-quality" class="uk-select mt-1">
+              <option value="low">Bassa</option>
+              <option value="medium" selected>Media</option>
+              <option value="high">Alta</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="uk-divider-icon"></div>
+
+        <div>
+          <label class="uk-form-label" for="input-filename">Nome file</label>
+          <div class="mt-1 flex items-center gap-2">
+            <input id="input-filename" class="uk-input flex-1" type="text" value="documento" />
+            <span class="text-sm text-muted-foreground">.pdf</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="uk-form-label">Destinazione</label>
+          <div class="mt-1 flex items-center gap-2">
+            <input id="input-destination" class="uk-input flex-1" type="text" readonly placeholder="Nessuna destinazione scelta" />
+            <button id="btn-choose-dest" class="uk-btn uk-btn-default uk-btn-icon" type="button" title="Scegli destinazione">
+              <uk-icon icon="folder"></uk-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="rounded-md border border-border bg-muted/40 p-3">
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-1 text-sm text-muted-foreground">
+              <uk-icon icon="gauge" size="14"></uk-icon>Dimensione stimata
+            </span>
+            <span id="estimate-value" class="text-lg font-semibold">—</span>
+          </div>
+          <p id="estimate-note" class="mt-1 text-xs text-muted-foreground"></p>
+        </div>
+      </div>
+
+      <div class="uk-card-footer flex flex-col gap-2 py-3">
+        <div id="progress-wrap" class="hidden flex-col gap-1">
+          <progress id="build-progress" class="uk-progress" value="0" max="100"></progress>
+          <p id="progress-label" class="text-center text-xs text-muted-foreground"></p>
+        </div>
+        <div id="result-wrap" class="hidden items-center gap-2 rounded-md border border-border p-2 text-sm"></div>
+        <button id="btn-build" class="uk-btn uk-btn-primary w-full" type="button" disabled>
+          <uk-icon icon="file-down" size="16" class="mr-2"></uk-icon>Crea PDF
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <div id="drag-overlay" class="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center bg-primary/10 backdrop-blur-sm">
+    <div class="uk-card border-2 border-dashed p-10 text-center">
+      <uk-icon icon="download" size="36" class="mx-auto mb-3 text-primary"></uk-icon>
+      <p class="text-lg font-medium">Rilascia qui le immagini</p>
+    </div>
+  </div>
+
+  <div id="toast-root" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

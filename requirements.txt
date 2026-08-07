@@ -1,0 +1,11 @@
+# Windows/macOS: pywebview porta già con sé le dipendenze del backend nativo
+# (WebView2/pythonnet, WKWebView/pyobjc) — non serve altro.
+pywebview>=5.4; sys_platform != "linux"
+
+# Linux: nessun backend è incluso di default. L'extra "qt" installa
+# QtPy + PyQt6 + PyQt6-WebEngine (pip puro, nessun pacchetto di sistema/sudo
+# richiesto). Alternativa più leggera ma che richiede sudo: vedi il README.
+pywebview[qt]>=5.4; sys_platform == "linux"
+
+Pillow>=10.0
+pikepdf>=8.0
