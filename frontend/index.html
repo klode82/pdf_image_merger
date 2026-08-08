@@ -77,9 +77,14 @@
       <div class="uk-card flex min-h-0 flex-1 flex-col">
         <div class="uk-card-header flex items-center justify-between py-2">
           <h3 class="uk-card-title text-sm">File da unire (<span id="file-count">0</span>)</h3>
-          <button id="btn-clear" class="uk-btn uk-btn-ghost uk-btn-sm text-destructive" type="button">
-            <uk-icon icon="trash-2" size="14" class="mr-1"></uk-icon>Svuota
-          </button>
+          <div class="flex items-center gap-1">
+            <button id="btn-sort" class="uk-btn uk-btn-ghost uk-btn-sm" type="button" title="Ordina per nome (A-Z)">
+              <uk-icon icon="arrow-down-a-z" size="14" class="mr-1"></uk-icon>Ordina
+            </button>
+            <button id="btn-clear" class="uk-btn uk-btn-ghost uk-btn-sm text-destructive" type="button">
+              <uk-icon icon="trash-2" size="14" class="mr-1"></uk-icon>Svuota
+            </button>
+          </div>
         </div>
         <div class="uk-card-body min-h-0 flex-1 overflow-y-auto p-2">
           <ul id="file-list" uk-sortable="handle: .drag-handle" class="flex flex-col gap-1"></ul>

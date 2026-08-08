@@ -146,6 +146,14 @@ class Api:
         self._files = new_order
         return self._files_payload()
 
+    def sort_files(self) -> dict:
+        """Plain ascending sort by filename. Adding a whole folder already
+        sorts this way (see pdf_builder.list_images()), but dropping/picking
+        individual files keeps whatever order the OS reported them in —
+        which isn't guaranteed to be sorted at all."""
+        self._files.sort(key=lambda p: Path(p).name.lower())
+        return self._files_payload()
+
     # ------------------------------------------------------------------
     # Estimate / build
     # ------------------------------------------------------------------

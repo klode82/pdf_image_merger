@@ -8,6 +8,7 @@
     dropzone: document.getElementById("dropzone"),
     btnPickFolder: document.getElementById("btn-pick-folder"),
     btnPickFiles: document.getElementById("btn-pick-files"),
+    btnSort: document.getElementById("btn-sort"),
     btnClear: document.getElementById("btn-clear"),
     fileList: document.getElementById("file-list"),
     fileCount: document.getElementById("file-count"),
@@ -311,6 +312,7 @@
     setScanningButtonsDisabled(true);
     applyFilesPayload(await window.pywebview.api.pick_files());
   });
+  els.btnSort.addEventListener("click", async () => applyFilesPayload(await window.pywebview.api.sort_files()));
   els.btnClear.addEventListener("click", async () => applyFilesPayload(await window.pywebview.api.clear_files()));
 
   els.selFormat.addEventListener("change", () => {
