@@ -10,12 +10,43 @@ from __future__ import annotations
 
 import io
 import os
+import platform
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
 from PIL import Image, ImageOps
+
+# ---------------------------------------------------------------------------
+# Windows long-path support
+# ---------------------------------------------------------------------------
+
+_IS_WINDOWS = platform.system() == "Windows"
+
+
+def _winpath(path: Path) -> str:
+    """String form of `path` safe for actual file I/O on Windows.
+
+    Windows' legacy file APIs cap paths at ~260 characters (MAX_PATH) unless
+    the caller either enables the LongPathsEnabled registry setting (off by
+    default) or prefixes the path with "\\\\?\\", which Win32 honors
+    unconditionally. Deeply nested folder structures — a comic/manga archive
+    with several levels of descriptive subfolder names is a textbook case —
+    commonly cross 260 characters even when no single folder/file name looks
+    unreasonable on its own, causing `FileNotFoundError: [Errno 2] No such
+    file or directory` for a file that is actually there.
+
+    A no-op on Linux/macOS, which don't have this limit.
+    """
+    if not _IS_WINDOWS:
+        return str(path)
+    resolved = str(Path(path).resolve())
+    if resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):  # UNC path: \\server\share\...
+        return "\\\\?\\UNC\\" + resolved[2:]
+    return "\\\\?\\" + resolved
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -73,16 +104,23 @@ class ImageInfo:
 # ---------------------------------------------------------------------------
 
 def is_supported_image(path: Path) -> bool:
-    return path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
+    return path.suffix.lower() in SUPPORTED_EXTENSIONS and os.path.isfile(_winpath(path))
 
 
 def list_images(folder: Path) -> list[Path]:
     """Non-recursive: every supported image directly inside `folder`, sorted by name."""
     folder = Path(folder)
-    if not folder.is_dir():
+    if not os.path.isdir(_winpath(folder)):
         return []
+    # os.scandir(long-path string) instead of folder.iterdir(): the listing
+    # itself can hit Windows' MAX_PATH just from the folder's own nesting
+    # depth, before any filename is even added. Entries are rejoined onto
+    # the original (unprefixed) `folder` so callers keep getting normal
+    # Path objects — only the actual I/O calls need the \\?\ form.
+    with os.scandir(_winpath(folder)) as entries:
+        candidates = [folder / entry.name for entry in entries]
     return sorted(
-        (p for p in folder.iterdir() if is_supported_image(p)),
+        (p for p in candidates if is_supported_image(p)),
         key=lambda p: p.name.lower(),
     )
 
@@ -90,7 +128,7 @@ def list_images(folder: Path) -> list[Path]:
 def expand_dropped_path(path: Path) -> list[Path]:
     """A dropped item can be a single image or a folder full of them."""
     path = Path(path)
-    if path.is_dir():
+    if os.path.isdir(_winpath(path)):
         return list_images(path)
     if is_supported_image(path):
         return [path]
@@ -100,9 +138,9 @@ def expand_dropped_path(path: Path) -> list[Path]:
 def get_image_info(path: Path) -> ImageInfo | None:
     path = Path(path)
     try:
-        with Image.open(path) as img:
+        with Image.open(_winpath(path)) as img:
             width, height = img.size
-        size_bytes = path.stat().st_size
+        size_bytes = os.stat(_winpath(path)).st_size
     except Exception:
         return None
     return ImageInfo(
@@ -118,7 +156,7 @@ def get_image_info(path: Path) -> ImageInfo | None:
 def make_thumbnail_data_uri(path: Path, max_side: int = 96) -> str | None:
     """Small base64 JPEG data URI used for the file-list preview. Best-effort."""
     try:
-        with Image.open(path) as img:
+        with Image.open(_winpath(path)) as img:
             img = ImageOps.exif_transpose(img)
             img = _to_rgb(img)
             img.thumbnail((max_side, max_side), Image.LANCZOS)
@@ -189,7 +227,7 @@ def _fit_contain(img: Image.Image, target_size: tuple[int, int]) -> Image.Image:
 
 def render_page(path: Path, page_size_px: tuple[int, int] | None) -> Image.Image:
     """Open one source image and turn it into a single ready-to-save RGB PDF page."""
-    with Image.open(path) as raw:
+    with Image.open(_winpath(path)) as raw:
         img = ImageOps.exif_transpose(raw)
         img = _to_rgb(img)
         if page_size_px is None:
@@ -311,7 +349,7 @@ def _estimate_chunk_size(image_paths: list[Path], page_size_px: tuple[int, int] 
         width, height = page_size_px
     else:
         try:
-            with Image.open(image_paths[0]) as probe:
+            with Image.open(_winpath(image_paths[0])) as probe:
                 width, height = probe.size
         except Exception:
             width, height = 2000, 2000  # conservative guess if the first image can't be read
@@ -358,7 +396,7 @@ def _try_jpeg_passthrough(path: Path):
     if path.suffix.lower() not in _JPEG_EXTENSIONS:
         return None
     try:
-        with Image.open(path) as img:
+        with Image.open(_winpath(path)) as img:
             if img.mode not in ("RGB", "L"):
                 return None  # CMYK JPEGs etc. — not worth the extra risk here
             mode = img.mode
@@ -368,7 +406,8 @@ def _try_jpeg_passthrough(path: Path):
         if geometry is None:
             return None  # mirrored (2/4/5/7) or unrecognized tag
         matrix_px, page_size_px = geometry(width, height)
-        raw_bytes = path.read_bytes()
+        with open(_winpath(path), "rb") as f:
+            raw_bytes = f.read()
     except Exception:
         return None
     return raw_bytes, mode, matrix_px, page_size_px
@@ -400,7 +439,7 @@ def _append_original_page(pdf, path: Path, dpi: int) -> None:
         image_xobj = Stream(pdf, raw_bytes)
         image_xobj.Type = Name.XObject
         image_xobj.Subtype = Name.Image
-        with Image.open(path) as probe:
+        with Image.open(_winpath(path)) as probe:
             image_xobj.Width, image_xobj.Height = probe.size
         image_xobj.BitsPerComponent = 8
         image_xobj.ColorSpace = Name.DeviceGray if mode == "L" else Name.DeviceRGB
@@ -456,7 +495,7 @@ def build_pdf(
         raise ValueError("Nessuna immagine da unire.")
 
     output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    os.makedirs(_winpath(output_path.parent), exist_ok=True)
 
     original_quality = _is_original_quality(settings)
     dpi = int(settings.get("dpi", 150))
@@ -485,13 +524,14 @@ def build_pdf(
                 done += len(chunk_paths)
                 if progress_cb:
                     progress_cb(done, total)
-        merged.save(output_path)
+        merged.save(_winpath(output_path))
     finally:
         merged.close()
 
+    output_size = os.path.getsize(_winpath(output_path))
     return {
         "output_path": str(output_path),
         "pages": total,
-        "size_bytes": os.path.getsize(output_path),
-        "size_human": human_size(os.path.getsize(output_path)),
+        "size_bytes": output_size,
+        "size_human": human_size(output_size),
     }
