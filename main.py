@@ -10,6 +10,7 @@ Run with:  python main.py
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import platform
 import sys
@@ -94,6 +95,34 @@ def bind_drag_and_drop(window: webview.Window, api: Api) -> None:
     document.events.drop += DOMEventHandler(_make_on_drop(api), True, True)
 
 
+def _linux_gui() -> str | None:
+    """Which pywebview backend to force on Linux, or None to let it
+    auto-detect.
+
+    pywebview's own auto-detection (webview/guilib.py) tries GTK before Qt
+    unless told otherwise, and that attempt is a plain `import gi` with no
+    guard around the console noise — it logs a full traceback for the
+    ModuleNotFoundError even though it then falls back to Qt just fine. Our
+    default Linux install (`pywebview[qt]` in requirements.txt) never
+    installs GTK bindings, so that traceback fires on every single launch.
+    Forcing gui="qt" up front skips the GTK probe entirely instead of just
+    tolerating its noise — confirmed in guilib.py: with forced_gui == "qt"
+    the probe order becomes [import_qt, import_gtk], and import_gtk is never
+    even reached once Qt succeeds.
+
+    Only forces it when PyQt6 is actually importable, so the README's
+    alternative "system GTK, no PyQt6" install path keeps auto-detecting
+    (and getting GTK) exactly as before.
+    """
+    if platform.system() != "Linux":
+        return None
+    if getattr(sys, "frozen", False):
+        return "qt"  # packaged build always bundles PyQt6 — see pdfimagemerger.spec
+    if importlib.util.find_spec("PyQt6") is not None:
+        return "qt"
+    return None
+
+
 def main() -> None:
     api = Api()
 
@@ -113,14 +142,9 @@ def main() -> None:
     def bind(win: webview.Window) -> None:
         bind_drag_and_drop(win, api)
 
-    # The packaged Linux build (see build.sh) bundles PyQt6 specifically, so
-    # pin the backend there instead of letting pywebview probe for GTK first
-    # (which isn't bundled and would just waste a failed import on every
-    # launch). Windows keeps using its native WebView2 backend either way —
-    # forcing "qt" there would break the packaged .exe, which never bundles
-    # PyQt6. A plain `python main.py` from source keeps auto-detecting.
-    is_frozen = getattr(sys, "frozen", False)
-    gui = "qt" if (is_frozen and platform.system() == "Linux") else None
+    # Windows keeps using its native WebView2 backend either way — forcing
+    # "qt" there would break the packaged .exe, which never bundles PyQt6.
+    gui = _linux_gui()
 
     webview.start(
         bind,
