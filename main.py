@@ -124,7 +124,7 @@ def _linux_gui() -> str | None:
 
 
 def main() -> None:
-    api = Api()
+    api = Api(base_dir=BASE_DIR)
 
     window = webview.create_window(
         WINDOW_TITLE,

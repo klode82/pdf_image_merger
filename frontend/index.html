@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it" class="uk-theme-zinc">
+<html lang="en" class="uk-theme-zinc">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -23,6 +23,8 @@
   .shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / .3), 0 4px 6px -4px rgb(0 0 0 / .3); }
   .bg-primary\/10 { background-color: hsl(var(--primary) / .1); }
   .bg-muted\/40 { background-color: hsl(var(--muted) / .4); }
+  .bg-black\/60 { background-color: rgb(0 0 0 / .6); }
+  .max-w-md { max-width: 28rem; }
   /* Franken UI's alert component only ships a default look plus
      "destructive" (see uk-alert-destructive in core.min.css) — no success
      variant, so this mirrors the same --uk-alert-* variable pattern. */
@@ -51,9 +53,14 @@
       <uk-icon icon="layers" class="text-primary"></uk-icon>
       <h1 class="text-lg font-semibold tracking-tight">PDFImageMerger</h1>
     </div>
-    <button id="btn-theme" class="uk-btn uk-btn-ghost uk-btn-icon" title="Cambia tema" type="button">
-      <uk-icon icon="moon" id="icon-theme"></uk-icon>
-    </button>
+    <div class="flex items-center gap-1">
+      <button id="btn-settings" class="uk-btn uk-btn-ghost uk-btn-icon" data-i18n-title="header.preferences" title="Preferences" type="button">
+        <uk-icon icon="settings" size="18"></uk-icon>
+      </button>
+      <button id="btn-theme" class="uk-btn uk-btn-ghost uk-btn-icon" data-i18n-title="header.changeTheme" title="Change theme" type="button">
+        <uk-icon icon="moon" id="icon-theme"></uk-icon>
+      </button>
+    </div>
   </header>
 
   <main id="app-main" class="min-h-0 flex-1 overflow-hidden p-4">
@@ -62,13 +69,13 @@
     <section class="flex min-h-0 flex-col gap-3">
       <div id="dropzone" class="rounded-lg border-2 border-dashed border-border p-4 text-center transition-colors">
         <uk-icon icon="image-plus" size="28" class="mx-auto mb-2 text-muted-foreground"></uk-icon>
-        <p class="text-sm text-muted-foreground">Trascina qui immagini o una cartella, oppure</p>
+        <p class="text-sm text-muted-foreground" data-i18n="dropzone.hint">Drag images or a folder here, or</p>
         <div class="mt-3 flex justify-center gap-2">
           <button id="btn-pick-folder" class="uk-btn uk-btn-primary uk-btn-sm" type="button">
-            <uk-icon icon="folder-open" size="16" class="mr-1"></uk-icon>Scegli cartella
+            <uk-icon icon="folder-open" size="16" class="mr-1"></uk-icon><span data-i18n="dropzone.pickFolder">Choose folder</span>
           </button>
           <button id="btn-pick-files" class="uk-btn uk-btn-default uk-btn-sm" type="button">
-            <uk-icon icon="image" size="16" class="mr-1"></uk-icon>Scegli immagini
+            <uk-icon icon="image" size="16" class="mr-1"></uk-icon><span data-i18n="dropzone.pickFiles">Choose images</span>
           </button>
         </div>
       </div>
@@ -80,20 +87,20 @@
 
       <div class="uk-card flex min-h-0 flex-1 flex-col">
         <div class="uk-card-header flex items-center justify-between py-2">
-          <h3 class="uk-card-title text-sm">File da unire (<span id="file-count">0</span>)</h3>
+          <h3 class="uk-card-title text-sm"><span data-i18n="fileList.title">Files to merge</span> (<span id="file-count">0</span>)</h3>
           <div class="flex items-center gap-1">
-            <button id="btn-sort" class="uk-btn uk-btn-ghost uk-btn-sm" type="button" title="Ordina per nome (A-Z)">
-              <uk-icon icon="arrow-down-a-z" size="14" class="mr-1"></uk-icon>Ordina
+            <button id="btn-sort" class="uk-btn uk-btn-ghost uk-btn-sm" type="button" data-i18n-title="fileList.sortTitle" title="Sort by name (A-Z)">
+              <uk-icon icon="arrow-down-a-z" size="14" class="mr-1"></uk-icon><span data-i18n="fileList.sort">Sort</span>
             </button>
             <button id="btn-clear" class="uk-btn uk-btn-ghost uk-btn-sm text-destructive" type="button">
-              <uk-icon icon="trash-2" size="14" class="mr-1"></uk-icon>Svuota
+              <uk-icon icon="trash-2" size="14" class="mr-1"></uk-icon><span data-i18n="fileList.clear">Clear</span>
             </button>
           </div>
         </div>
         <div class="uk-card-body min-h-0 flex-1 overflow-y-auto p-2">
           <ul id="file-list" uk-sortable="handle: .drag-handle" class="flex flex-col gap-1"></ul>
-          <p id="empty-hint" class="py-10 text-center text-sm text-muted-foreground">
-            Nessuna immagine selezionata
+          <p id="empty-hint" class="py-10 text-center text-sm text-muted-foreground" data-i18n="fileList.empty">
+            No images selected
           </p>
         </div>
       </div>
@@ -102,7 +109,7 @@
     <!-- RIGHT COLUMN: settings -->
     <section class="uk-card flex min-h-0 flex-col">
       <div class="uk-card-header py-2">
-        <h3 class="uk-card-title text-sm">Impostazioni PDF</h3>
+        <h3 class="uk-card-title text-sm" data-i18n="pdfOptions.title">PDF settings</h3>
       </div>
 
       <div class="uk-card-body flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-3">
@@ -110,54 +117,53 @@
         <div class="flex items-start gap-3 rounded-md border border-border p-3">
           <input id="chk-original-quality" type="checkbox" class="uk-toggle-switch uk-toggle-switch-primary mt-1 shrink-0" />
           <label for="chk-original-quality" class="text-sm">
-            <span class="font-medium">Non modificare le immagini</span>
-            <p class="text-xs text-muted-foreground">
-              Nessun ridimensionamento e nessuna compressione: ogni pagina avrà le
-              dimensioni originali dell'immagine e i pixel resteranno identici
-              (file più pesante).
+            <span class="font-medium" data-i18n="pdfOptions.keepOriginal.label">Don't modify images</span>
+            <p class="text-xs text-muted-foreground" data-i18n="pdfOptions.keepOriginal.description">
+              No resizing and no compression: every page keeps the image's original
+              dimensions and pixels unchanged (larger file).
             </p>
           </label>
         </div>
 
         <div id="format-field">
-          <label class="uk-form-label" for="sel-format">Formato pagina</label>
+          <label class="uk-form-label" for="sel-format" data-i18n="pdfOptions.pageFormat.label">Page format</label>
           <select id="sel-format" class="uk-select mt-1">
-            <option value="auto">Adatta all'immagine (nessun ridimensionamento forzato)</option>
+            <option value="auto" data-i18n="pdfOptions.pageFormat.auto">Fit to image (no forced resizing)</option>
             <option value="A4" selected>A4</option>
-            <option value="Letter">Letter (US)</option>
-            <option value="Legal">Legal (US)</option>
+            <option value="Letter" data-i18n="pdfOptions.pageFormat.letter">Letter (US)</option>
+            <option value="Legal" data-i18n="pdfOptions.pageFormat.legal">Legal (US)</option>
             <option value="A5">A5</option>
           </select>
         </div>
 
         <div id="orientation-field">
-          <label class="uk-form-label">Orientamento</label>
+          <label class="uk-form-label" data-i18n="pdfOptions.orientation.label">Orientation</label>
           <div class="mt-1 flex gap-2" id="orientation-group">
             <button type="button" data-value="portrait" class="orient-btn uk-btn uk-btn-default flex-1" aria-pressed="true">
-              <uk-icon icon="rectangle-vertical" size="16" class="mr-1"></uk-icon>Verticale
+              <uk-icon icon="rectangle-vertical" size="16" class="mr-1"></uk-icon><span data-i18n="pdfOptions.orientation.portrait">Portrait</span>
             </button>
             <button type="button" data-value="landscape" class="orient-btn uk-btn uk-btn-default flex-1" aria-pressed="false">
-              <uk-icon icon="rectangle-horizontal" size="16" class="mr-1"></uk-icon>Orizzontale
+              <uk-icon icon="rectangle-horizontal" size="16" class="mr-1"></uk-icon><span data-i18n="pdfOptions.orientation.landscape">Landscape</span>
             </button>
           </div>
         </div>
 
         <div id="resolution-quality-field" class="grid grid-cols-2 gap-3">
           <div>
-            <label class="uk-form-label" for="sel-dpi">Risoluzione</label>
+            <label class="uk-form-label" for="sel-dpi" data-i18n="pdfOptions.resolution.label">Resolution</label>
             <select id="sel-dpi" class="uk-select mt-1">
-              <option value="72">72 DPI (schermo)</option>
-              <option value="150" selected>150 DPI (buona)</option>
-              <option value="300">300 DPI (stampa)</option>
-              <option value="600">600 DPI (alta)</option>
+              <option value="72" data-i18n="pdfOptions.resolution.dpi72">72 DPI (screen)</option>
+              <option value="150" selected data-i18n="pdfOptions.resolution.dpi150">150 DPI (good)</option>
+              <option value="300" data-i18n="pdfOptions.resolution.dpi300">300 DPI (print)</option>
+              <option value="600" data-i18n="pdfOptions.resolution.dpi600">600 DPI (high)</option>
             </select>
           </div>
           <div>
-            <label class="uk-form-label" for="sel-quality">Compressione</label>
+            <label class="uk-form-label" for="sel-quality" data-i18n="pdfOptions.quality.label">Compression</label>
             <select id="sel-quality" class="uk-select mt-1">
-              <option value="low">Bassa</option>
-              <option value="medium" selected>Media</option>
-              <option value="high">Alta</option>
+              <option value="low" data-i18n="pdfOptions.quality.low">Low</option>
+              <option value="medium" selected data-i18n="pdfOptions.quality.medium">Medium</option>
+              <option value="high" data-i18n="pdfOptions.quality.high">High</option>
             </select>
           </div>
         </div>
@@ -165,18 +171,18 @@
         <div class="uk-divider-icon"></div>
 
         <div>
-          <label class="uk-form-label" for="input-filename">Nome file</label>
+          <label class="uk-form-label" for="input-filename" data-i18n="pdfOptions.filename.label">File name</label>
           <div class="mt-1 flex items-center gap-2">
-            <input id="input-filename" class="uk-input flex-1" type="text" value="documento" />
+            <input id="input-filename" class="uk-input flex-1" type="text" value="document" />
             <span class="text-sm text-muted-foreground">.pdf</span>
           </div>
         </div>
 
         <div>
-          <label class="uk-form-label">Destinazione</label>
+          <label class="uk-form-label" data-i18n="pdfOptions.destination.label">Destination</label>
           <div class="mt-1 flex items-center gap-2">
-            <input id="input-destination" class="uk-input flex-1" type="text" readonly placeholder="Nessuna destinazione scelta" />
-            <button id="btn-choose-dest" class="uk-btn uk-btn-default uk-btn-icon" type="button" title="Scegli destinazione">
+            <input id="input-destination" class="uk-input flex-1" type="text" readonly data-i18n-placeholder="pdfOptions.destination.placeholder" placeholder="No destination chosen" />
+            <button id="btn-choose-dest" class="uk-btn uk-btn-default uk-btn-icon" type="button" data-i18n-title="pdfOptions.destination.chooseTitle" title="Choose destination">
               <uk-icon icon="folder"></uk-icon>
             </button>
           </div>
@@ -185,7 +191,7 @@
         <div class="rounded-md border border-border bg-muted/40 p-3">
           <div class="flex items-center justify-between">
             <span class="flex items-center gap-1 text-sm text-muted-foreground">
-              <uk-icon icon="gauge" size="14"></uk-icon>Dimensione stimata
+              <uk-icon icon="gauge" size="14"></uk-icon><span data-i18n="pdfOptions.estimate.label">Estimated size</span>
             </span>
             <span id="estimate-value" class="text-lg font-semibold">—</span>
           </div>
@@ -201,10 +207,10 @@
         <div id="result-wrap" class="hidden items-center gap-2 rounded-md border border-border p-2 text-sm"></div>
         <div class="flex gap-2">
           <button id="btn-build" class="uk-btn uk-btn-primary flex-1" type="button" disabled>
-            <uk-icon icon="file-down" size="16" class="mr-2"></uk-icon>Crea PDF
+            <uk-icon icon="file-down" size="16" class="mr-2"></uk-icon><span data-i18n="actions.createPdf">Create PDF</span>
           </button>
-          <button id="btn-new" class="uk-btn uk-btn-default" type="button" title="Svuota tutto e ricomincia">
-            <uk-icon icon="file-plus" size="16" class="mr-2"></uk-icon>Crea Nuovo
+          <button id="btn-new" class="uk-btn uk-btn-default" type="button" data-i18n-title="actions.createNewTitle" title="Clear everything and start over">
+            <uk-icon icon="file-plus" size="16" class="mr-2"></uk-icon><span data-i18n="actions.createNew">Create new</span>
           </button>
         </div>
       </div>
@@ -214,7 +220,47 @@
   <div id="drag-overlay" class="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center bg-primary/10 backdrop-blur-sm">
     <div class="uk-card border-2 border-dashed p-10 text-center">
       <uk-icon id="drag-overlay-icon" icon="download" size="36" class="mx-auto mb-3 text-primary"></uk-icon>
-      <p id="drag-overlay-text" class="text-lg font-medium">Rilascia qui le immagini</p>
+      <p id="drag-overlay-text" class="text-lg font-medium" data-i18n="dragOverlay.ready">Drop images here</p>
+    </div>
+  </div>
+
+  <!-- Preferences modal: shown/hidden with plain classList toggling (see
+       app.js), not Franken UI's own JS component wiring — its "core"
+       bundle carries UIkit 3's classic attribute/mixin component system
+       (confirmed by reading it) rather than a documented public JS API for
+       this build, so controlling visibility ourselves, the same way the
+       drag-overlay above already does, is the reliable option. Only the
+       *inner* uk-modal-* classes are used, for their padding/typography —
+       not the outer .uk-modal itself, which defaults to display:none/
+       opacity:0 pending a JS "open" class this bundle's trigger mechanism
+       wasn't confirmed for. -->
+  <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="uk-card max-w-md w-full">
+      <div class="uk-modal-header flex items-center justify-between">
+        <h2 class="uk-modal-title" data-i18n="preferences.title">Preferences</h2>
+        <button id="btn-settings-close" class="uk-btn uk-btn-ghost uk-btn-icon" type="button">
+          <uk-icon icon="x" size="18"></uk-icon>
+        </button>
+      </div>
+      <div class="uk-modal-body flex flex-col gap-4">
+        <div>
+          <label class="uk-form-label" for="sel-language" data-i18n="preferences.language.label">Language</label>
+          <select id="sel-language" class="uk-select mt-1">
+            <option value="auto" data-i18n="preferences.language.auto">Automatic (system language)</option>
+          </select>
+        </div>
+        <div>
+          <label class="uk-form-label" for="sel-theme-pref" data-i18n="preferences.theme.label">Theme</label>
+          <select id="sel-theme-pref" class="uk-select mt-1">
+            <option value="auto" data-i18n="preferences.theme.auto">Automatic (system)</option>
+            <option value="light" data-i18n="preferences.theme.light">Light</option>
+            <option value="dark" data-i18n="preferences.theme.dark">Dark</option>
+          </select>
+        </div>
+      </div>
+      <div class="uk-modal-footer flex justify-end">
+        <button id="btn-settings-close-2" class="uk-btn uk-btn-default" type="button" data-i18n="preferences.close">Close</button>
+      </div>
     </div>
   </div>
 

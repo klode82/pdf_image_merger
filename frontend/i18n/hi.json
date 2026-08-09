@@ -1,0 +1,117 @@
+{
+  "header": {
+    "changeTheme": "थीम बदलें",
+    "preferences": "प्राथमिकताएं"
+  },
+  "dropzone": {
+    "hint": "यहाँ इमेज या फ़ोल्डर खींचकर लाएँ, या",
+    "pickFolder": "फ़ोल्डर चुनें",
+    "pickFiles": "इमेज चुनें"
+  },
+  "dragOverlay": {
+    "ready": "इमेज यहाँ छोड़ें",
+    "busy": "मौजूदा कार्य पूरा होने की प्रतीक्षा करें…"
+  },
+  "fileList": {
+    "title": "मिलाने के लिए फ़ाइलें",
+    "sort": "क्रमबद्ध करें",
+    "sortTitle": "नाम के अनुसार क्रमबद्ध करें (A-Z)",
+    "clear": "साफ़ करें",
+    "empty": "कोई इमेज चयनित नहीं",
+    "dragToReorder": "क्रम बदलने के लिए खींचें",
+    "remove": "हटाएँ"
+  },
+  "pdfOptions": {
+    "title": "PDF सेटिंग्स",
+    "keepOriginal": {
+      "label": "इमेज में बदलाव न करें",
+      "description": "कोई आकार परिवर्तन और कोई संपीड़न नहीं: हर पेज इमेज के मूल आकार और पिक्सेल को अपरिवर्तित रखेगा (फ़ाइल बड़ी होगी)।"
+    },
+    "pageFormat": {
+      "label": "पेज फ़ॉर्मेट",
+      "auto": "इमेज के अनुसार समायोजित करें (कोई जबरन आकार परिवर्तन नहीं)",
+      "letter": "लेटर (US)",
+      "legal": "लीगल (US)"
+    },
+    "orientation": {
+      "label": "दिशा",
+      "portrait": "पोर्ट्रेट (खड़ा)",
+      "landscape": "लैंडस्केप (आड़ा)"
+    },
+    "resolution": {
+      "label": "रेज़ोल्यूशन",
+      "dpi72": "72 DPI (स्क्रीन)",
+      "dpi150": "150 DPI (अच्छा)",
+      "dpi300": "300 DPI (प्रिंट)",
+      "dpi600": "600 DPI (उच्च)"
+    },
+    "quality": {
+      "label": "संपीड़न",
+      "low": "कम",
+      "medium": "मध्यम",
+      "high": "उच्च"
+    },
+    "filename": {
+      "label": "फ़ाइल का नाम",
+      "default": "दस्तावेज़"
+    },
+    "destination": {
+      "label": "गंतव्य",
+      "placeholder": "कोई गंतव्य नहीं चुना गया",
+      "chooseTitle": "गंतव्य चुनें"
+    },
+    "estimate": {
+      "label": "अनुमानित आकार"
+    }
+  },
+  "actions": {
+    "createPdf": "PDF बनाएँ",
+    "createNew": "नया बनाएँ",
+    "createNewTitle": "सब कुछ साफ़ करें और फिर से शुरू करें"
+  },
+  "progress": {
+    "buildLabel": "इमेज {done} / {total} को संसाधित किया जा रहा है…",
+    "scanLabel": "इमेज {done} / {total} का विश्लेषण किया जा रहा है…"
+  },
+  "estimate": {
+    "page": "{count} पेज",
+    "pages": "{count} पेज",
+    "partialSample": " ({total} में से {sampled} इमेज के नमूने के आधार पर अनुमान)",
+    "losslessNote": " · मूल गुणवत्ता, कोई संपीड़न नहीं",
+    "notAvailable": "उपलब्ध नहीं"
+  },
+  "result": {
+    "page": "{count} पेज",
+    "pages": "{count} पेज",
+    "openFolderTitle": "फ़ोल्डर खोलें",
+    "openFileTitle": "PDF खोलें"
+  },
+  "toast": {
+    "busyRejected": "एक अन्य कार्य पहले से चल रहा है: अधिक फ़ाइलें जोड़ने से पहले उसके पूरा होने की प्रतीक्षा करें।",
+    "buildFailed": "PDF नहीं बन सका।",
+    "buildSuccess": "PDF सफलतापूर्वक बन गया।"
+  },
+  "preferences": {
+    "title": "प्राथमिकताएं",
+    "language": {
+      "label": "भाषा",
+      "auto": "स्वचालित (सिस्टम भाषा)"
+    },
+    "theme": {
+      "label": "थीम",
+      "auto": "स्वचालित (सिस्टम)",
+      "light": "हल्का",
+      "dark": "गहरा"
+    },
+    "close": "बंद करें"
+  },
+  "dialogs": {
+    "imagesFilter": "इमेज",
+    "allFilesFilter": "सभी फ़ाइलें"
+  },
+  "errors": {
+    "busy": "एक अन्य कार्य पहले से चल रहा है।",
+    "noImages": "मिलाने के लिए कोई इमेज नहीं है।",
+    "noDestination": "कोई गंतव्य चयनित नहीं।"
+  }
+}

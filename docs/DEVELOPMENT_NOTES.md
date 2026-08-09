@@ -276,3 +276,44 @@ semplicemente un no-op).
 - Il toggle "Non modificare le immagini" usa la classe `uk-toggle-switch-primary`
   di Franken UI — senza il modificatore `-primary`/`-destructive`, il CSS
   della libreria muove solo il pallino ma non colora mai la traccia al click.
+
+## Lingua e tema: perché non `localStorage`
+
+Prima di implementare le 6 lingue (inglese, italiano, spagnolo, francese,
+cinese semplificato, hindi) e la persistenza del tema, ho verificato leggendo
+**ogni** backend in `webview/platforms/*.py` che pywebview di default esegue
+il motore webview sottostante in modalità privata/effimera:
+`edgechromium.py` chiama `IsInPrivateModeEnabled`, `gtk.py` crea
+esplicitamente un "ephemeral context" (`WebContext.new_ephemeral()`), e così
+via su ogni piattaforma. Significa che `localStorage` non viene mai scritto
+su disco a meno di disattivare esplicitamente questa modalità — la
+persistenza del tema che avevo implementato inizialmente con
+`localStorage.setItem(...)` non sarebbe quindi sopravvissuta a un riavvio
+dell'app. Corretto spostando lingua e tema in un file JSON gestito
+direttamente da `settings.py`, in una cartella standard per ogni sistema
+operativo (vedi il README principale, sezione "Localization").
+
+Il rilevamento della lingua di sistema (`settings.detect_system_language()`)
+usa un approccio diverso per ogni OS invece di un generico
+`locale.getlocale()` (che riflette perlopiù la locale C, spesso non
+impostata): `GetUserDefaultUILanguage()` via ctypes su Windows, `defaults
+read -g AppleLocale` su macOS (le app GUI in bundle `.app` spesso non
+erediteno affatto `LANG`/`LC_ALL`, non essendo lanciate da una shell), le
+variabili d'ambiente `LANG`/`LC_ALL`/`LANGUAGE` su Linux. I rami Windows e
+macOS sono stati verificati solo mockando le rispettive API (nessuna
+macchina Windows o Mac disponibile durante lo sviluppo), non su un sistema
+reale.
+
+**Verifica del cambio lingua/tema**: fatta pilotando l'app reale (avviata
+con `--debug`) tramite il protocollo Chrome DevTools (CDP) via WebSocket —
+non con uno screenshot. Ho collegato un piccolo script Node al target CDP
+dell'app, simulato il cambio di ciascuna delle 6 lingue e del tema
+selezionando davvero gli elementi `<select>` e disparando eventi `change`
+reali (fondamentale: chiamare le funzioni interne di `app.js` direttamente
+da un contesto esterno NON funziona, perché sono racchiuse nella IIFE di
+modulo e irraggiungibili dall'esterno — errore che ho effettivamente commesso
+nel primo tentativo, scoprendolo proprio grazie a questa verifica), e letto
+il contenuto testuale risultante nel DOM per ciascuna lingua. Verificata
+anche la persistenza reale: cambiato il tema, poi richiamato
+`get_settings()` da capo (rilettura indipendente dal file su disco) per
+confermare che il valore fosse davvero scritto, non solo tenuto in memoria.

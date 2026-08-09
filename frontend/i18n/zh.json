@@ -1,0 +1,117 @@
+{
+  "header": {
+    "changeTheme": "切换主题",
+    "preferences": "偏好设置"
+  },
+  "dropzone": {
+    "hint": "将图片或文件夹拖放到此处，或者",
+    "pickFolder": "选择文件夹",
+    "pickFiles": "选择图片"
+  },
+  "dragOverlay": {
+    "ready": "将图片拖放到此处",
+    "busy": "请等待当前操作完成…"
+  },
+  "fileList": {
+    "title": "待合并的文件",
+    "sort": "排序",
+    "sortTitle": "按名称排序（A-Z）",
+    "clear": "清空",
+    "empty": "未选择任何图片",
+    "dragToReorder": "拖动以调整顺序",
+    "remove": "移除"
+  },
+  "pdfOptions": {
+    "title": "PDF 设置",
+    "keepOriginal": {
+      "label": "不修改图片",
+      "description": "不进行缩放和压缩：每一页都会保持图片原始的尺寸和像素不变（文件会更大）。"
+    },
+    "pageFormat": {
+      "label": "页面格式",
+      "auto": "适应图片（不强制缩放）",
+      "letter": "Letter（美国）",
+      "legal": "Legal（美国）"
+    },
+    "orientation": {
+      "label": "方向",
+      "portrait": "竖向",
+      "landscape": "横向"
+    },
+    "resolution": {
+      "label": "分辨率",
+      "dpi72": "72 DPI（屏幕）",
+      "dpi150": "150 DPI（较好）",
+      "dpi300": "300 DPI（打印）",
+      "dpi600": "600 DPI（高）"
+    },
+    "quality": {
+      "label": "压缩率",
+      "low": "低",
+      "medium": "中",
+      "high": "高"
+    },
+    "filename": {
+      "label": "文件名",
+      "default": "文档"
+    },
+    "destination": {
+      "label": "保存位置",
+      "placeholder": "尚未选择保存位置",
+      "chooseTitle": "选择保存位置"
+    },
+    "estimate": {
+      "label": "预计大小"
+    }
+  },
+  "actions": {
+    "createPdf": "创建 PDF",
+    "createNew": "新建",
+    "createNewTitle": "清空全部并重新开始"
+  },
+  "progress": {
+    "buildLabel": "正在处理第 {done} / {total} 张图片…",
+    "scanLabel": "正在分析第 {done} / {total} 张图片…"
+  },
+  "estimate": {
+    "page": "{count} 页",
+    "pages": "{count} 页",
+    "partialSample": "（基于 {total} 张图片中抽样的 {sampled} 张估算）",
+    "losslessNote": " · 原始质量，无压缩",
+    "notAvailable": "不可用"
+  },
+  "result": {
+    "page": "{count} 页",
+    "pages": "{count} 页",
+    "openFolderTitle": "打开文件夹",
+    "openFileTitle": "打开 PDF"
+  },
+  "toast": {
+    "busyRejected": "已有其他操作正在进行：请等待其完成后再添加更多文件。",
+    "buildFailed": "PDF 创建失败。",
+    "buildSuccess": "PDF 创建成功。"
+  },
+  "preferences": {
+    "title": "偏好设置",
+    "language": {
+      "label": "语言",
+      "auto": "自动（系统语言）"
+    },
+    "theme": {
+      "label": "主题",
+      "auto": "自动（跟随系统）",
+      "light": "浅色",
+      "dark": "深色"
+    },
+    "close": "关闭"
+  },
+  "dialogs": {
+    "imagesFilter": "图片",
+    "allFilesFilter": "所有文件"
+  },
+  "errors": {
+    "busy": "已有其他操作正在进行。",
+    "noImages": "没有可合并的图片。",
+    "noDestination": "未选择保存位置。"
+  }
+}

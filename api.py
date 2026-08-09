@@ -9,6 +9,7 @@ never lets an exception cross into JS unhandled.
 
 from __future__ import annotations
 
+import json
 import platform
 import subprocess
 from pathlib import Path
@@ -16,6 +17,19 @@ from pathlib import Path
 import webview
 
 import pdf_builder as pb
+import settings as app_settings
+
+# Shown next to each language in the picker — always in that language's own
+# name (an "autonym"), regardless of the UI's current language, so someone
+# can find their language even if the UI is currently showing the wrong one.
+LANGUAGE_NAMES = {
+    "en": "English",
+    "it": "Italiano",
+    "es": "Español",
+    "fr": "Français",
+    "zh": "中文",
+    "hi": "हिन्दी",
+}
 
 
 def _to_js_literal(value) -> str:
@@ -26,13 +40,11 @@ def _to_js_literal(value) -> str:
     as a script, not through JSON.parse, so an image filename containing one
     could otherwise break the generated call.
     """
-    import json
-
     return json.dumps(value).replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
 
 
 class Api:
-    def __init__(self):
+    def __init__(self, base_dir: Path | None = None):
         self.window: webview.Window | None = None
         self._files: list[str] = []          # ordered, de-duplicated absolute paths
         self._thumb_cache: dict[str, str | None] = {}
@@ -44,6 +56,13 @@ class Api:
         # and is also what tells JS (via the same onScanProgress signal) to
         # disable everything for a drop-triggered scan too.
         self._busy = False
+        # base_dir mirrors main.py's frozen-aware BASE_DIR (PyInstaller
+        # unpacks bundled data to sys._MEIPASS at runtime, not next to this
+        # .py file) — passed in from main.py so this one bit of path logic
+        # has a single source of truth instead of being duplicated here.
+        self._base_dir = base_dir or Path(__file__).resolve().parent
+        self._translations_cache: dict[str, dict] = {}
+        self._lang = app_settings.resolve_language(app_settings.load())
 
     def set_window(self, window: webview.Window) -> None:
         # pywebview reflectively walks every attribute of the js_api object
@@ -60,6 +79,59 @@ class Api:
         # pywebview's own documented escape hatch for exactly this case.
         window._serializable = False
         self.window = window
+
+    # ------------------------------------------------------------------
+    # Settings / i18n
+    # ------------------------------------------------------------------
+
+    def _load_translations(self, lang: str) -> dict:
+        if lang not in self._translations_cache:
+            path = self._base_dir / "frontend" / "i18n" / f"{lang}.json"
+            try:
+                self._translations_cache[lang] = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                self._translations_cache[lang] = {}
+        return self._translations_cache[lang]
+
+    def _t(self, dotted_key: str, **params) -> str:
+        """Backend-side translation for the handful of user-facing strings
+        Python itself generates (file-dialog filters, build errors) — the
+        same JSON catalogs the frontend uses, so there's exactly one set of
+        translated strings, not two."""
+        node = self._load_translations(self._lang)
+        for part in dotted_key.split("."):
+            node = node.get(part) if isinstance(node, dict) else None
+            if node is None:
+                break
+        text = node if isinstance(node, str) else dotted_key
+        for key, value in params.items():
+            text = text.replace("{" + key + "}", str(value))
+        return text
+
+    def get_settings(self) -> dict:
+        prefs = app_settings.load()
+        self._lang = app_settings.resolve_language(prefs)
+        return {
+            "language_pref": prefs["language"],
+            "language": self._lang,
+            "theme_pref": prefs["theme"],
+            "translations": self._load_translations(self._lang),
+            "available_languages": [
+                {"code": code, "name": name} for code, name in LANGUAGE_NAMES.items()
+            ],
+        }
+
+    def set_language(self, lang: str) -> dict:
+        prefs = app_settings.load()
+        prefs["language"] = lang if lang == "auto" or lang in app_settings.SUPPORTED_LANGUAGES else "auto"
+        app_settings.save(prefs)
+        return self.get_settings()
+
+    def set_theme(self, theme: str) -> dict:
+        prefs = app_settings.load()
+        prefs["theme"] = theme if theme in app_settings.THEMES else "auto"
+        app_settings.save(prefs)
+        return self.get_settings()
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -160,7 +232,10 @@ class Api:
             result = self.window.create_file_dialog(
                 webview.FileDialog.OPEN,
                 allow_multiple=True,
-                file_types=(f"Immagini ({exts})", "Tutti i file (*.*)"),
+                file_types=(
+                    f"{self._t('dialogs.imagesFilter')} ({exts})",
+                    f"{self._t('dialogs.allFilesFilter')} (*.*)",
+                ),
             )
             if not result:
                 return self._files_payload()
@@ -217,11 +292,11 @@ class Api:
 
     def build(self, settings: dict, output_path: str) -> dict:
         if self._busy:
-            return {"success": False, "error": "Un'altra operazione è già in corso."}
+            return {"success": False, "error": self._t("errors.busy")}
         if not self._files:
-            return {"success": False, "error": "Non ci sono immagini da unire."}
+            return {"success": False, "error": self._t("errors.noImages")}
         if not output_path:
-            return {"success": False, "error": "Nessuna destinazione selezionata."}
+            return {"success": False, "error": self._t("errors.noDestination")}
 
         def progress(done: int, total: int) -> None:
             if self.window is not None:

@@ -1,0 +1,117 @@
+{
+  "header": {
+    "changeTheme": "Changer de thème",
+    "preferences": "Préférences"
+  },
+  "dropzone": {
+    "hint": "Faites glisser des images ou un dossier ici, ou bien",
+    "pickFolder": "Choisir un dossier",
+    "pickFiles": "Choisir des images"
+  },
+  "dragOverlay": {
+    "ready": "Déposez les images ici",
+    "busy": "Attendez la fin de l'opération en cours…"
+  },
+  "fileList": {
+    "title": "Fichiers à fusionner",
+    "sort": "Trier",
+    "sortTitle": "Trier par nom (A-Z)",
+    "clear": "Vider",
+    "empty": "Aucune image sélectionnée",
+    "dragToReorder": "Faites glisser pour réorganiser",
+    "remove": "Retirer"
+  },
+  "pdfOptions": {
+    "title": "Paramètres du PDF",
+    "keepOriginal": {
+      "label": "Ne pas modifier les images",
+      "description": "Aucun redimensionnement ni compression : chaque page conservera les dimensions d'origine de l'image et les pixels resteront identiques (fichier plus volumineux)."
+    },
+    "pageFormat": {
+      "label": "Format de page",
+      "auto": "Ajuster à l'image (aucun redimensionnement forcé)",
+      "letter": "Letter (US)",
+      "legal": "Legal (US)"
+    },
+    "orientation": {
+      "label": "Orientation",
+      "portrait": "Portrait",
+      "landscape": "Paysage"
+    },
+    "resolution": {
+      "label": "Résolution",
+      "dpi72": "72 DPI (écran)",
+      "dpi150": "150 DPI (bonne)",
+      "dpi300": "300 DPI (impression)",
+      "dpi600": "600 DPI (élevée)"
+    },
+    "quality": {
+      "label": "Compression",
+      "low": "Faible",
+      "medium": "Moyenne",
+      "high": "Élevée"
+    },
+    "filename": {
+      "label": "Nom du fichier",
+      "default": "document"
+    },
+    "destination": {
+      "label": "Destination",
+      "placeholder": "Aucune destination choisie",
+      "chooseTitle": "Choisir la destination"
+    },
+    "estimate": {
+      "label": "Taille estimée"
+    }
+  },
+  "actions": {
+    "createPdf": "Créer le PDF",
+    "createNew": "Nouveau",
+    "createNewTitle": "Tout vider et recommencer"
+  },
+  "progress": {
+    "buildLabel": "Traitement de l'image {done} sur {total}…",
+    "scanLabel": "Analyse de l'image {done} sur {total}…"
+  },
+  "estimate": {
+    "page": "{count} page",
+    "pages": "{count} pages",
+    "partialSample": " (estimation basée sur {sampled} images sur {total} échantillonnées)",
+    "losslessNote": " · qualité d'origine, sans compression",
+    "notAvailable": "n/d"
+  },
+  "result": {
+    "page": "{count} page",
+    "pages": "{count} pages",
+    "openFolderTitle": "Ouvrir le dossier",
+    "openFileTitle": "Ouvrir le PDF"
+  },
+  "toast": {
+    "busyRejected": "Une autre opération est déjà en cours : attendez qu'elle se termine avant d'ajouter d'autres fichiers.",
+    "buildFailed": "Impossible de créer le PDF.",
+    "buildSuccess": "PDF créé avec succès."
+  },
+  "preferences": {
+    "title": "Préférences",
+    "language": {
+      "label": "Langue",
+      "auto": "Automatique (langue du système)"
+    },
+    "theme": {
+      "label": "Thème",
+      "auto": "Automatique (système)",
+      "light": "Clair",
+      "dark": "Sombre"
+    },
+    "close": "Fermer"
+  },
+  "dialogs": {
+    "imagesFilter": "Images",
+    "allFilesFilter": "Tous les fichiers"
+  },
+  "errors": {
+    "busy": "Une autre opération est déjà en cours.",
+    "noImages": "Il n'y a aucune image à fusionner.",
+    "noDestination": "Aucune destination sélectionnée."
+  }
+}

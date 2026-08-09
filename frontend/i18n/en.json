@@ -1,0 +1,117 @@
+{
+  "header": {
+    "changeTheme": "Change theme",
+    "preferences": "Preferences"
+  },
+  "dropzone": {
+    "hint": "Drag images or a folder here, or",
+    "pickFolder": "Choose folder",
+    "pickFiles": "Choose images"
+  },
+  "dragOverlay": {
+    "ready": "Drop images here",
+    "busy": "Wait for the current operation to finish…"
+  },
+  "fileList": {
+    "title": "Files to merge",
+    "sort": "Sort",
+    "sortTitle": "Sort by name (A-Z)",
+    "clear": "Clear",
+    "empty": "No images selected",
+    "dragToReorder": "Drag to reorder",
+    "remove": "Remove"
+  },
+  "pdfOptions": {
+    "title": "PDF settings",
+    "keepOriginal": {
+      "label": "Don't modify images",
+      "description": "No resizing and no compression: every page keeps the image's original dimensions and pixels unchanged (larger file)."
+    },
+    "pageFormat": {
+      "label": "Page format",
+      "auto": "Fit to image (no forced resizing)",
+      "letter": "Letter (US)",
+      "legal": "Legal (US)"
+    },
+    "orientation": {
+      "label": "Orientation",
+      "portrait": "Portrait",
+      "landscape": "Landscape"
+    },
+    "resolution": {
+      "label": "Resolution",
+      "dpi72": "72 DPI (screen)",
+      "dpi150": "150 DPI (good)",
+      "dpi300": "300 DPI (print)",
+      "dpi600": "600 DPI (high)"
+    },
+    "quality": {
+      "label": "Compression",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "filename": {
+      "label": "File name",
+      "default": "document"
+    },
+    "destination": {
+      "label": "Destination",
+      "placeholder": "No destination chosen",
+      "chooseTitle": "Choose destination"
+    },
+    "estimate": {
+      "label": "Estimated size"
+    }
+  },
+  "actions": {
+    "createPdf": "Create PDF",
+    "createNew": "Create new",
+    "createNewTitle": "Clear everything and start over"
+  },
+  "progress": {
+    "buildLabel": "Processing image {done} of {total}…",
+    "scanLabel": "Analyzing image {done} of {total}…"
+  },
+  "estimate": {
+    "page": "{count} page",
+    "pages": "{count} pages",
+    "partialSample": " (estimated from {sampled} of {total} sampled images)",
+    "losslessNote": " · original quality, no compression",
+    "notAvailable": "n/a"
+  },
+  "result": {
+    "page": "{count} page",
+    "pages": "{count} pages",
+    "openFolderTitle": "Open folder",
+    "openFileTitle": "Open PDF"
+  },
+  "toast": {
+    "busyRejected": "Another operation is already in progress: wait for it to finish before adding more files.",
+    "buildFailed": "Could not create the PDF.",
+    "buildSuccess": "PDF created successfully."
+  },
+  "preferences": {
+    "title": "Preferences",
+    "language": {
+      "label": "Language",
+      "auto": "Automatic (system language)"
+    },
+    "theme": {
+      "label": "Theme",
+      "auto": "Automatic (system)",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "close": "Close"
+  },
+  "dialogs": {
+    "imagesFilter": "Images",
+    "allFilesFilter": "All files"
+  },
+  "errors": {
+    "busy": "Another operation is already in progress.",
+    "noImages": "There are no images to merge.",
+    "noDestination": "No destination selected."
+  }
+}

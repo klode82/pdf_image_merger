@@ -47,6 +47,13 @@
     toastRoot: document.getElementById("toast-root"),
     btnTheme: document.getElementById("btn-theme"),
     iconTheme: document.getElementById("icon-theme"),
+
+    btnSettings: document.getElementById("btn-settings"),
+    settingsModal: document.getElementById("settings-modal"),
+    btnSettingsClose: document.getElementById("btn-settings-close"),
+    btnSettingsClose2: document.getElementById("btn-settings-close-2"),
+    selLanguage: document.getElementById("sel-language"),
+    selThemePref: document.getElementById("sel-theme-pref"),
   };
 
   let files = [];
@@ -54,6 +61,94 @@
   let filenameTouched = false;
   let estimateSeq = 0;
   let isBusy = false; // mirrors Api._busy — a scan or a build is running
+
+  // ------------------------------------------------------------------
+  // i18n — translations come from Python (api.get_settings()), which reads
+  // the same frontend/i18n/*.json this app.js would otherwise have to
+  // fetch() itself. Fetching a local file works fine for <img>/<link> under
+  // pywebview's file:// origin, but explicit fetch()/XHR of another local
+  // file is exactly the kind of thing that varies across pywebview's
+  // different underlying browser engines (WebView2/QtWebEngine/WebKitGTK/
+  // WKWebView) — routing it through the already-proven pywebview.api
+  // bridge sidesteps that entirely, and Python needs these same strings
+  // for its own error messages anyway, so there's one catalog, not two.
+  // ------------------------------------------------------------------
+
+  let translations = {};
+  let settingsMeta = { language: "en", language_pref: "auto", theme_pref: "auto" };
+
+  function t(key, params) {
+    let node = translations;
+    for (const part of key.split(".")) {
+      node = node && typeof node === "object" ? node[part] : undefined;
+    }
+    let text = typeof node === "string" ? node : key;
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        text = text.split(`{${k}}`).join(v);
+      }
+    }
+    return text;
+  }
+
+  function applyTranslations() {
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      el.textContent = t(el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+      el.title = t(el.getAttribute("data-i18n-title"));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+      el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
+    });
+  }
+
+  function populateLanguageOptions(languages, currentPref) {
+    els.selLanguage.querySelectorAll('option:not([value="auto"])').forEach((o) => o.remove());
+    for (const lang of languages || []) {
+      const opt = document.createElement("option");
+      opt.value = lang.code;
+      opt.textContent = lang.name; // each language's own name for itself — never translated
+      els.selLanguage.appendChild(opt);
+    }
+    els.selLanguage.value = currentPref;
+  }
+
+  async function loadAndApplySettings() {
+    const s = await window.pywebview.api.get_settings();
+    settingsMeta = s;
+    translations = s.translations || {};
+    document.documentElement.lang = s.language;
+    applyTranslations();
+    populateLanguageOptions(s.available_languages, s.language_pref);
+    els.selThemePref.value = s.theme_pref;
+    applyTheme(s.theme_pref);
+    if (!filenameTouched && files.length === 0) {
+      els.inputFilename.value = t("pdfOptions.filename.default");
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Theme — persisted on the Python side (see settings.py), not via
+  // localStorage: pywebview defaults to "private mode" for the underlying
+  // webview engine (WebView2 IsInPrivateModeEnabled, WebKitGTK's ephemeral
+  // WebContext, etc. — confirmed by reading every webview/platforms/*.py
+  // backend), which does not persist localStorage to disk at all. "auto"
+  // is resolved to light/dark here, in JS, via matchMedia — the one part
+  // of this that's genuinely more reliable from the browser side than
+  // asking the OS directly from Python.
+  // ------------------------------------------------------------------
+
+  function resolveThemeMode(pref) {
+    if (pref === "light" || pref === "dark") return pref;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+
+  function applyTheme(pref) {
+    const mode = resolveThemeMode(pref);
+    document.documentElement.classList.toggle("dark", mode === "dark");
+    els.iconTheme.setAttribute("icon", mode === "dark" ? "sun" : "moon");
+  }
 
   // ------------------------------------------------------------------
   // Small helpers
@@ -119,8 +214,8 @@
     if (filenameTouched || files.length === 0) return;
     const first = files[0].path;
     const parts = first.split(/[\\/]/);
-    const parentName = parts.length > 1 ? parts[parts.length - 2] : "documento";
-    els.inputFilename.value = (parentName || "documento").trim();
+    const parentName = parts.length > 1 ? parts[parts.length - 2] : t("pdfOptions.filename.default");
+    els.inputFilename.value = (parentName || t("pdfOptions.filename.default")).trim();
   }
 
   // ------------------------------------------------------------------
@@ -143,7 +238,7 @@
         : `<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border text-muted-foreground"><uk-icon icon="image" size="16"></uk-icon></div>`;
 
       li.innerHTML = `
-        <span class="drag-handle text-muted-foreground" title="Trascina per riordinare">
+        <span class="drag-handle text-muted-foreground" title="${escapeHtml(t("fileList.dragToReorder"))}">
           <uk-icon icon="grip-vertical" size="16"></uk-icon>
         </span>
         ${thumbHtml}
@@ -151,7 +246,7 @@
           <div class="truncate text-sm font-medium">${escapeHtml(f.name)}</div>
           <div class="truncate text-xs text-muted-foreground">${f.width}×${f.height} · ${f.size_human}</div>
         </div>
-        <button class="uk-btn uk-btn-ghost uk-btn-icon shrink-0 btn-remove" type="button" title="Rimuovi">
+        <button class="uk-btn uk-btn-ghost uk-btn-icon shrink-0 btn-remove" type="button" title="${escapeHtml(t("fileList.remove"))}">
           <uk-icon icon="x" size="16"></uk-icon>
         </button>
       `;
@@ -212,17 +307,17 @@
   window.pdfMerger.onBuildProgress = (done, total) => {
     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
     els.buildProgress.value = pct;
-    els.progressLabel.textContent = `Elaborazione immagine ${done} di ${total}…`;
+    els.progressLabel.textContent = t("progress.buildLabel", { done, total });
   };
   window.pdfMerger.onScanProgress = (done, total) => {
     if (total <= 0) return;
     showScanProgress();
     setBusyUI(true); // fires for drop-triggered scans too, not just button clicks
     els.scanProgress.value = Math.round((done / total) * 100);
-    els.scanProgressLabel.textContent = `Analisi immagine ${done} di ${total}…`;
+    els.scanProgressLabel.textContent = t("progress.scanLabel", { done, total });
   };
   window.pdfMerger.onBusyRejected = () => {
-    toast("Un'altra operazione è già in corso: attendi che finisca prima di aggiungere altri file.", "error");
+    toast(t("toast.busyRejected"), "error");
   };
 
   // ------------------------------------------------------------------
@@ -255,16 +350,16 @@
     const res = await window.pywebview.api.estimate(currentSettings());
     if (seq !== estimateSeq) return; // a newer request superseded this one
     if (!res || res.error) {
-      els.estimateValue.textContent = "n/d";
+      els.estimateValue.textContent = t("estimate.notAvailable");
       els.estimateNote.textContent = res && res.error ? res.error : "";
       return;
     }
     els.estimateValue.textContent = res.estimated_human;
-    const pagesNote = `${res.total} pagin${res.total === 1 ? "a" : "e"}`;
+    const pagesNote = t(res.total === 1 ? "estimate.page" : "estimate.pages", { count: res.total });
     const sampleNote = res.is_partial_sample
-      ? ` (stima su ${res.sampled} di ${res.total} immagini campionate)`
+      ? t("estimate.partialSample", { sampled: res.sampled, total: res.total })
       : "";
-    const losslessNote = els.chkOriginalQuality.checked ? " · qualità originale, senza compressione" : "";
+    const losslessNote = els.chkOriginalQuality.checked ? t("estimate.losslessNote") : "";
     els.estimateNote.textContent = pagesNote + sampleNote + losslessNote;
   }
 
@@ -278,7 +373,7 @@
   }
 
   async function handleBuild() {
-    const name = els.inputFilename.value.trim() || "documento";
+    const name = els.inputFilename.value.trim() || t("pdfOptions.filename.default");
     const sep = destinationFolder.includes("\\") && !destinationFolder.includes("/") ? "\\" : "/";
     const outputPath = destinationFolder.replace(/[/\\]+$/, "") + sep + name.replace(/\.pdf$/i, "") + ".pdf";
 
@@ -287,7 +382,7 @@
     els.progressWrap.classList.remove("hidden");
     els.progressWrap.classList.add("flex");
     els.buildProgress.value = 0;
-    els.progressLabel.textContent = `Elaborazione immagine 0 di ${files.length}…`;
+    els.progressLabel.textContent = t("progress.buildLabel", { done: 0, total: files.length });
 
     const res = await window.pywebview.api.build(currentSettings(), outputPath);
 
@@ -296,29 +391,30 @@
     setBusyUI(false);
 
     if (!res || !res.success) {
-      toast((res && res.error) || "Creazione del PDF non riuscita.", "error");
+      toast((res && res.error) || t("toast.buildFailed"), "error");
       return;
     }
 
     els.resultWrap.classList.remove("hidden");
     els.resultWrap.classList.add("flex");
+    const pagesText = t(res.pages === 1 ? "result.page" : "result.pages", { count: res.pages });
     els.resultWrap.innerHTML = `
       <uk-icon icon="check-circle-2" class="text-primary shrink-0"></uk-icon>
       <div class="min-w-0 flex-1">
         <div class="truncate font-medium">${escapeHtml(res.output_path)}</div>
-        <div class="text-xs text-muted-foreground">${res.pages} pagine · ${res.size_human}</div>
+        <div class="text-xs text-muted-foreground">${escapeHtml(pagesText)} · ${res.size_human}</div>
       </div>
-      <button id="btn-open-folder" class="uk-btn uk-btn-ghost uk-btn-icon" title="Apri cartella" type="button">
+      <button id="btn-open-folder" class="uk-btn uk-btn-ghost uk-btn-icon" title="${escapeHtml(t("result.openFolderTitle"))}" type="button">
         <uk-icon icon="folder-open" size="16"></uk-icon>
       </button>
-      <button id="btn-open-file" class="uk-btn uk-btn-ghost uk-btn-icon" title="Apri PDF" type="button">
+      <button id="btn-open-file" class="uk-btn uk-btn-ghost uk-btn-icon" title="${escapeHtml(t("result.openFileTitle"))}" type="button">
         <uk-icon icon="external-link" size="16"></uk-icon>
       </button>
     `;
     document.getElementById("btn-open-folder").addEventListener("click", () => window.pywebview.api.reveal_output(res.output_path));
     document.getElementById("btn-open-file").addEventListener("click", () => window.pywebview.api.open_output(res.output_path));
 
-    toast("PDF creato correttamente.", "success");
+    toast(t("toast.buildSuccess"), "success");
   }
 
   // Resets everything for a new merge job: file list, destination,
@@ -329,7 +425,7 @@
     applyFilesPayload(await window.pywebview.api.clear_files());
     destinationFolder = null;
     els.inputDestination.value = "";
-    els.inputFilename.value = "documento";
+    els.inputFilename.value = t("pdfOptions.filename.default");
     filenameTouched = false;
     els.resultWrap.classList.add("hidden");
     els.resultWrap.classList.remove("flex");
@@ -338,6 +434,43 @@
     els.progressWrap.classList.remove("flex");
     updateBuildAvailability();
   }
+
+  // ------------------------------------------------------------------
+  // Preferences modal
+  // ------------------------------------------------------------------
+
+  function openSettingsModal() {
+    els.settingsModal.classList.remove("hidden");
+    els.settingsModal.classList.add("flex");
+  }
+
+  function closeSettingsModal() {
+    els.settingsModal.classList.add("hidden");
+    els.settingsModal.classList.remove("flex");
+  }
+
+  els.btnSettings.addEventListener("click", openSettingsModal);
+  els.btnSettingsClose.addEventListener("click", closeSettingsModal);
+  els.btnSettingsClose2.addEventListener("click", closeSettingsModal);
+  els.settingsModal.addEventListener("click", (e) => {
+    if (e.target === els.settingsModal) closeSettingsModal();
+  });
+
+  els.selLanguage.addEventListener("change", async () => {
+    const s = await window.pywebview.api.set_language(els.selLanguage.value);
+    settingsMeta = s;
+    translations = s.translations || {};
+    document.documentElement.lang = s.language;
+    applyTranslations();
+    renderFiles(); // refresh dynamic per-row tooltips (drag handle / remove) in the new language
+    scheduleEstimate();
+  });
+
+  els.selThemePref.addEventListener("change", async () => {
+    const s = await window.pywebview.api.set_theme(els.selThemePref.value);
+    settingsMeta = s;
+    applyTheme(s.theme_pref);
+  });
 
   // ------------------------------------------------------------------
   // Wiring
@@ -409,9 +542,7 @@
       els.dragOverlay.classList.remove("hidden");
       els.dragOverlay.classList.add("flex");
       els.dragOverlayIcon.setAttribute("icon", isBusy ? "hourglass" : "download");
-      els.dragOverlayText.textContent = isBusy
-        ? "Attendi il completamento dell'operazione in corso…"
-        : "Rilascia qui le immagini";
+      els.dragOverlayText.textContent = isBusy ? t("dragOverlay.busy") : t("dragOverlay.ready");
     })
   );
   ["dragleave", "drop"].forEach((evt) =>
@@ -422,28 +553,24 @@
     })
   );
 
-  // Theme toggle (persisted, mirrors Franken UI's own convention).
-  function applyTheme(mode) {
-    document.documentElement.classList.toggle("dark", mode === "dark");
-    els.iconTheme.setAttribute("icon", mode === "dark" ? "sun" : "moon");
-    localStorage.setItem("pdfmerger-theme", mode);
-  }
-  els.btnTheme.addEventListener("click", () => {
-    const next = document.documentElement.classList.contains("dark") ? "light" : "dark";
-    applyTheme(next);
+  // Quick header toggle: flips between an explicit light/dark choice. The
+  // Preferences modal's own select is where "automatic (system)" lives.
+  els.btnTheme.addEventListener("click", async () => {
+    const next = resolveThemeMode(settingsMeta.theme_pref) === "dark" ? "light" : "dark";
+    const s = await window.pywebview.api.set_theme(next);
+    settingsMeta = s;
+    els.selThemePref.value = s.theme_pref;
+    applyTheme(s.theme_pref);
   });
-  applyTheme(
-    localStorage.getItem("pdfmerger-theme") ||
-      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-  );
 
   // ------------------------------------------------------------------
   // Boot
   // ------------------------------------------------------------------
 
-  function init() {
+  async function init() {
     updateSettingsAvailability();
-    window.pywebview.api.get_state().then(applyFilesPayload);
+    await loadAndApplySettings();
+    applyFilesPayload(await window.pywebview.api.get_state());
   }
 
   if (window.pywebview && window.pywebview.api) {

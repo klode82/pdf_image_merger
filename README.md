@@ -10,7 +10,7 @@
 
 **Turn a folder of images into one PDF — fast, offline, and cross-platform.**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/klode82/pdf_image_merger/releases)
+[![Version](https://img.shields.io/badge/version-1.0.1-blue)](https://github.com/klode82/pdf_image_merger/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)](#installation)
@@ -83,11 +83,14 @@ are where it earns its keep:
 - **Cross-platform** — runs from source on Windows, Linux, and macOS; ships
   as a standalone single-file executable for Windows (`.exe`) and Linux
   (`.AppImage`), no Python installation required on the machine that runs it.
+- **Six languages**, auto-detected from the OS or picked manually — see
+  [Localization](#localization).
 
 ## Table of contents
 
 - [Installation](#installation)
 - [Usage](#usage)
+- [Localization](#localization)
 - [Building a standalone executable](#building-a-standalone-executable)
 - [Tech stack](#tech-stack)
 - [Architecture](#architecture)
@@ -136,6 +139,31 @@ python main.py
    folder — or hit **Create new** to start the next batch without losing your
    settings.
 
+## Localization
+
+The UI is available in English, Italian, Spanish, French, Chinese
+(Simplified), and Hindi. On first launch it follows the OS's own language;
+open **Preferences** (gear icon, top right) to pick one explicitly instead,
+or to set the theme (auto/light/dark). Both choices are saved to a small
+JSON file on disk — not to the browser's `localStorage`, which pywebview
+runs in a private/ephemeral mode by default and does not persist across
+restarts (see [Under the hood](#under-the-hood)) — so they're remembered
+the next time the app starts:
+
+| OS | Config file |
+|---|---|
+| Windows | `%APPDATA%\PDFImageMerger\config.json` |
+| Linux | `~/.config/pdfimagemerger/config.json` |
+| macOS | `~/Library/Application Support/PDFImageMerger/config.json` |
+
+Translations live in `frontend/i18n/*.json`, one flat JSON file per
+language, loaded by the Python backend (`settings.py`/`api.py`) and handed
+to the frontend through the same `pywebview.api.*` bridge everything else
+uses — so the handful of error messages the backend itself generates come
+from the exact same catalog the UI does, not a second, separately
+maintained one. Contributing a new language means adding one file with the
+same keys as `frontend/i18n/en.json`.
+
 ## Building a standalone executable
 
 A distributable build that doesn't require Python on the machine that runs
@@ -174,12 +202,14 @@ pdf_image_merger/
 ├── main.py               # pywebview bootstrap + native OS drag & drop
 ├── api.py                # Python <-> JS bridge (pywebview.api.*), file-list state
 ├── pdf_builder.py         # pure image/PDF logic — no GUI dependency, independently testable
+├── settings.py            # persisted preferences (language, theme) + OS locale detection
 ├── build.sh / build.cmd   # standalone executable builds (Linux AppImage / Windows exe)
 ├── pdfimagemerger.spec    # PyInstaller spec used by both build scripts
 ├── VERSION                # single source of truth for the version shown in the window title
 ├── assets/                # app icon + the script that generates it
 └── frontend/
     ├── index.html, app.js
+    ├── i18n/               # en/it/es/fr/zh/hi.json — one translation catalog per language
     └── vendor/franken-ui/ # Franken UI, vendored — no CDN, works offline
 ```
 
@@ -218,6 +248,15 @@ A few decisions that shaped this app beyond "call Pillow and save":
   file — not just its name, which is all a browser exposes by default —
   uses pywebview's `window.dom` DOM-event bridge rather than plain HTML5
   drag & drop.
+- **Preferences that actually survive a restart.** pywebview defaults to
+  running its underlying webview in a private/incognito-style mode — WebView2's
+  `IsInPrivateModeEnabled`, WebKitGTK's ephemeral `WebContext`, and so on
+  across every backend (confirmed by reading each one). That means
+  `localStorage` is never written to disk at all unless you turn it off, so
+  saving language/theme there — a very natural first instinct — would
+  silently reset on every launch. Both are instead saved to a small JSON
+  file the app manages directly (see [Localization](#localization)),
+  sidestepping the whole question.
 
 More background on specific bugs hunted down along the way — a pywebview
 reflection bug that could freeze the window on Windows, a Windows icon
