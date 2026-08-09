@@ -23,6 +23,10 @@
   .shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / .3), 0 4px 6px -4px rgb(0 0 0 / .3); }
   .bg-primary\/10 { background-color: hsl(var(--primary) / .1); }
   .bg-muted\/40 { background-color: hsl(var(--muted) / .4); }
+  /* Franken UI's alert component only ships a default look plus
+     "destructive" (see uk-alert-destructive in core.min.css) — no success
+     variant, so this mirrors the same --uk-alert-* variable pattern. */
+  .uk-alert-success { --uk-alert-bg: #16a34a; --uk-alert-color: #fff; --uk-alert-border-color: #16a34a; }
 
   html, body { height: 100%; }
   body { -webkit-user-select: none; user-select: none; }
@@ -195,21 +199,26 @@
           <p id="progress-label" class="text-center text-xs text-muted-foreground"></p>
         </div>
         <div id="result-wrap" class="hidden items-center gap-2 rounded-md border border-border p-2 text-sm"></div>
-        <button id="btn-build" class="uk-btn uk-btn-primary w-full" type="button" disabled>
-          <uk-icon icon="file-down" size="16" class="mr-2"></uk-icon>Crea PDF
-        </button>
+        <div class="flex gap-2">
+          <button id="btn-build" class="uk-btn uk-btn-primary flex-1" type="button" disabled>
+            <uk-icon icon="file-down" size="16" class="mr-2"></uk-icon>Crea PDF
+          </button>
+          <button id="btn-new" class="uk-btn uk-btn-default" type="button" title="Svuota tutto e ricomincia">
+            <uk-icon icon="file-plus" size="16" class="mr-2"></uk-icon>Crea Nuovo
+          </button>
+        </div>
       </div>
     </section>
   </main>
 
   <div id="drag-overlay" class="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center bg-primary/10 backdrop-blur-sm">
     <div class="uk-card border-2 border-dashed p-10 text-center">
-      <uk-icon icon="download" size="36" class="mx-auto mb-3 text-primary"></uk-icon>
-      <p class="text-lg font-medium">Rilascia qui le immagini</p>
+      <uk-icon id="drag-overlay-icon" icon="download" size="36" class="mx-auto mb-3 text-primary"></uk-icon>
+      <p id="drag-overlay-text" class="text-lg font-medium">Rilascia qui le immagini</p>
     </div>
   </div>
 
-  <div id="toast-root" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+  <div id="toast-root" class="fixed bottom-4 left-4 z-50 flex flex-col gap-2"></div>
 
   <script src="app.js"></script>
 </body>

@@ -31,6 +31,7 @@
     estimateNote: document.getElementById("estimate-note"),
 
     btnBuild: document.getElementById("btn-build"),
+    btnNew: document.getElementById("btn-new"),
     progressWrap: document.getElementById("progress-wrap"),
     buildProgress: document.getElementById("build-progress"),
     progressLabel: document.getElementById("progress-label"),
@@ -41,6 +42,8 @@
     scanProgressLabel: document.getElementById("scan-progress-label"),
 
     dragOverlay: document.getElementById("drag-overlay"),
+    dragOverlayIcon: document.getElementById("drag-overlay-icon"),
+    dragOverlayText: document.getElementById("drag-overlay-text"),
     toastRoot: document.getElementById("toast-root"),
     btnTheme: document.getElementById("btn-theme"),
     iconTheme: document.getElementById("icon-theme"),
@@ -50,6 +53,7 @@
   let destinationFolder = null;
   let filenameTouched = false;
   let estimateSeq = 0;
+  let isBusy = false; // mirrors Api._busy — a scan or a build is running
 
   // ------------------------------------------------------------------
   // Small helpers
@@ -65,9 +69,11 @@
 
   function toast(message, tone = "default") {
     // Franken UI's alert component only ships a default look plus a
-    // "destructive" variant, so that's the only branch we need here.
+    // "destructive" variant — "success" is our own addition (see the
+    // .uk-alert-success rule in index.html's <style>).
+    const modifier = tone === "error" ? " uk-alert-destructive" : tone === "success" ? " uk-alert-success" : "";
     const el = document.createElement("div");
-    el.className = `uk-alert shadow-lg${tone === "error" ? " uk-alert-destructive" : ""}`;
+    el.className = `uk-alert shadow-lg${modifier}`;
     el.innerHTML = `<p>${escapeHtml(message)}</p>`;
     els.toastRoot.appendChild(el);
     setTimeout(() => el.remove(), 4500);
@@ -168,9 +174,10 @@
     renderFiles();
     suggestFilenameFromFiles();
     scheduleEstimate();
-    // By the time a files payload lands, any scan in progress is done.
+    // By the time a files payload lands, any scan in progress is done —
+    // whatever started it (a button click or a drop we didn't initiate).
     hideScanProgress();
-    setScanningButtonsDisabled(false);
+    setBusyUI(false);
   }
 
   function showScanProgress() {
@@ -183,10 +190,20 @@
     els.scanProgressWrap.classList.remove("flex");
   }
 
-  function setScanningButtonsDisabled(disabled) {
-    els.btnPickFolder.disabled = disabled;
-    els.btnPickFiles.disabled = disabled;
-    els.btnClear.disabled = disabled;
+  // Disables every entry point that could start a second, overlapping scan
+  // or build — the pick buttons, the drop zone, and the build button — and
+  // shows it visually. `Api._busy` is the actual guard (JS can't stop the
+  // OS from delivering a drop event), this just keeps the UI honest about it.
+  function setBusyUI(busy) {
+    isBusy = busy;
+    els.btnPickFolder.disabled = busy;
+    els.btnPickFiles.disabled = busy;
+    els.btnSort.disabled = busy;
+    els.btnClear.disabled = busy;
+    els.btnNew.disabled = busy;
+    els.dropzone.classList.toggle("opacity-50", busy);
+    els.dropzone.classList.toggle("pointer-events-none", busy);
+    updateBuildAvailability();
   }
 
   // Called by Python after a native drag & drop lands (see api.notify_files_dropped).
@@ -200,8 +217,12 @@
   window.pdfMerger.onScanProgress = (done, total) => {
     if (total <= 0) return;
     showScanProgress();
+    setBusyUI(true); // fires for drop-triggered scans too, not just button clicks
     els.scanProgress.value = Math.round((done / total) * 100);
     els.scanProgressLabel.textContent = `Analisi immagine ${done} di ${total}…`;
+  };
+  window.pdfMerger.onBusyRejected = () => {
+    toast("Un'altra operazione è già in corso: attendi che finisca prima di aggiungere altri file.", "error");
   };
 
   // ------------------------------------------------------------------
@@ -252,7 +273,8 @@
   // ------------------------------------------------------------------
 
   function updateBuildAvailability() {
-    els.btnBuild.disabled = files.length === 0 || !destinationFolder || !els.inputFilename.value.trim();
+    els.btnBuild.disabled =
+      isBusy || files.length === 0 || !destinationFolder || !els.inputFilename.value.trim();
   }
 
   async function handleBuild() {
@@ -260,7 +282,7 @@
     const sep = destinationFolder.includes("\\") && !destinationFolder.includes("/") ? "\\" : "/";
     const outputPath = destinationFolder.replace(/[/\\]+$/, "") + sep + name.replace(/\.pdf$/i, "") + ".pdf";
 
-    els.btnBuild.disabled = true;
+    setBusyUI(true);
     els.resultWrap.classList.add("hidden");
     els.progressWrap.classList.remove("hidden");
     els.progressWrap.classList.add("flex");
@@ -271,10 +293,10 @@
 
     els.progressWrap.classList.add("hidden");
     els.progressWrap.classList.remove("flex");
+    setBusyUI(false);
 
     if (!res || !res.success) {
       toast((res && res.error) || "Creazione del PDF non riuscita.", "error");
-      updateBuildAvailability();
       return;
     }
 
@@ -296,7 +318,24 @@
     document.getElementById("btn-open-folder").addEventListener("click", () => window.pywebview.api.reveal_output(res.output_path));
     document.getElementById("btn-open-file").addEventListener("click", () => window.pywebview.api.open_output(res.output_path));
 
-    toast("PDF creato correttamente.");
+    toast("PDF creato correttamente.", "success");
+  }
+
+  // Resets everything for a new merge job: file list, destination,
+  // filename, and any leftover result/progress from the previous one.
+  // Deliberately leaves the PDF settings (format/DPI/quality/…) alone —
+  // reusing them for the next batch is the common case.
+  async function handleNew() {
+    applyFilesPayload(await window.pywebview.api.clear_files());
+    destinationFolder = null;
+    els.inputDestination.value = "";
+    els.inputFilename.value = "documento";
+    filenameTouched = false;
+    els.resultWrap.classList.add("hidden");
+    els.resultWrap.classList.remove("flex");
+    hideScanProgress();
+    els.progressWrap.classList.add("hidden");
+    els.progressWrap.classList.remove("flex");
     updateBuildAvailability();
   }
 
@@ -305,11 +344,19 @@
   // ------------------------------------------------------------------
 
   els.btnPickFolder.addEventListener("click", async () => {
-    setScanningButtonsDisabled(true);
-    applyFilesPayload(await window.pywebview.api.pick_folder());
+    setBusyUI(true);
+    const res = await window.pywebview.api.pick_folder();
+    applyFilesPayload(res);
+    // Name the PDF after the picked folder — takes priority over
+    // applyFilesPayload's generic "guess it from the first file" heuristic,
+    // since here we know the folder for certain.
+    if (res && res.folder_name && !filenameTouched) {
+      els.inputFilename.value = res.folder_name;
+      updateBuildAvailability();
+    }
   });
   els.btnPickFiles.addEventListener("click", async () => {
-    setScanningButtonsDisabled(true);
+    setBusyUI(true);
     applyFilesPayload(await window.pywebview.api.pick_files());
   });
   els.btnSort.addEventListener("click", async () => applyFilesPayload(await window.pywebview.api.sort_files()));
@@ -349,15 +396,22 @@
   });
 
   els.btnBuild.addEventListener("click", handleBuild);
+  els.btnNew.addEventListener("click", handleNew);
 
   // Visual-only drag feedback (actual file paths are resolved on the Python
   // side via DOMEventHandler, see main.py — the browser sandbox otherwise
-  // hides real filesystem paths from JS).
+  // hides real filesystem paths from JS). When busy, the overlay still
+  // shows — just to say the drop won't be accepted — because Python's own
+  // guard in notify_files_dropped() is what actually rejects it either way.
   ["dragenter", "dragover"].forEach((evt) =>
     window.addEventListener(evt, (e) => {
       e.preventDefault();
       els.dragOverlay.classList.remove("hidden");
       els.dragOverlay.classList.add("flex");
+      els.dragOverlayIcon.setAttribute("icon", isBusy ? "hourglass" : "download");
+      els.dragOverlayText.textContent = isBusy
+        ? "Attendi il completamento dell'operazione in corso…"
+        : "Rilascia qui le immagini";
     })
   );
   ["dragleave", "drop"].forEach((evt) =>

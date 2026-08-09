@@ -36,6 +36,14 @@ class Api:
         self.window: webview.Window | None = None
         self._files: list[str] = []          # ordered, de-duplicated absolute paths
         self._thumb_cache: dict[str, str | None] = {}
+        # True while a scan (folder/files pick, or a drop) or a build is
+        # running. JS disables its own buttons before it even calls in, but
+        # a drop is triggered from Python's own DOM handler (main.py), with
+        # no JS click to hang a "disable the buttons" moment off of — this
+        # flag is what actually rejects a second overlapping drop/pick/build,
+        # and is also what tells JS (via the same onScanProgress signal) to
+        # disable everything for a drop-triggered scan too.
+        self._busy = False
 
     def set_window(self, window: webview.Window) -> None:
         # pywebview reflectively walks every attribute of the js_api object
@@ -60,6 +68,10 @@ class Api:
     def _emit_scan_progress(self, done: int, total: int) -> None:
         if self.window is not None:
             self.window.evaluate_js(f"window.pdfMerger && window.pdfMerger.onScanProgress({done},{total})")
+
+    def _emit_busy_rejected(self) -> None:
+        if self.window is not None:
+            self.window.evaluate_js("window.pdfMerger && window.pdfMerger.onBusyRejected && window.pdfMerger.onBusyRejected()")
 
     def _files_payload(self, report_progress: bool = False) -> dict:
         """Reads size/dimensions and builds a thumbnail for every file in the
@@ -96,11 +108,23 @@ class Api:
         return added
 
     def notify_files_dropped(self, raw_paths: list[str]) -> None:
-        """Called from the Python-side DOM drop handler in main.py (not from JS)."""
-        self._add_paths(raw_paths)
-        if self.window is not None:
-            payload = _to_js_literal(self._files_payload(report_progress=True))
-            self.window.evaluate_js(f"window.pdfMerger && window.pdfMerger.onFilesUpdated({payload})")
+        """Called from the Python-side DOM drop handler in main.py (not from JS).
+
+        JS can dim the dropzone all it wants, but it can't actually stop the
+        OS from delivering another drop while one is still being processed —
+        this check is the real guard.
+        """
+        if self._busy:
+            self._emit_busy_rejected()
+            return
+        self._busy = True
+        try:
+            self._add_paths(raw_paths)
+            if self.window is not None:
+                payload = _to_js_literal(self._files_payload(report_progress=True))
+                self.window.evaluate_js(f"window.pdfMerger && window.pdfMerger.onFilesUpdated({payload})")
+        finally:
+            self._busy = False
 
     # ------------------------------------------------------------------
     # File list management (called from JS)
@@ -110,23 +134,40 @@ class Api:
         return self._files_payload()
 
     def pick_folder(self) -> dict:
-        result = self.window.create_file_dialog(webview.FileDialog.FOLDER)
-        if not result:
+        if self._busy:
             return self._files_payload()
-        self._add_paths([result[0]])
-        return self._files_payload(report_progress=True)
+        self._busy = True
+        try:
+            result = self.window.create_file_dialog(webview.FileDialog.FOLDER)
+            if not result:
+                return self._files_payload()
+            folder = result if isinstance(result, str) else result[0]
+            self._add_paths([folder])
+            payload = self._files_payload(report_progress=True)
+            # So JS can name the PDF after the folder without having to
+            # guess it back out of the first file's path.
+            payload["folder_name"] = Path(folder).name
+            return payload
+        finally:
+            self._busy = False
 
     def pick_files(self) -> dict:
-        exts = ";".join(f"*{e}" for e in sorted(pb.SUPPORTED_EXTENSIONS))
-        result = self.window.create_file_dialog(
-            webview.FileDialog.OPEN,
-            allow_multiple=True,
-            file_types=(f"Immagini ({exts})", "Tutti i file (*.*)"),
-        )
-        if not result:
+        if self._busy:
             return self._files_payload()
-        self._add_paths(result)
-        return self._files_payload(report_progress=True)
+        self._busy = True
+        try:
+            exts = ";".join(f"*{e}" for e in sorted(pb.SUPPORTED_EXTENSIONS))
+            result = self.window.create_file_dialog(
+                webview.FileDialog.OPEN,
+                allow_multiple=True,
+                file_types=(f"Immagini ({exts})", "Tutti i file (*.*)"),
+            )
+            if not result:
+                return self._files_payload()
+            self._add_paths(result)
+            return self._files_payload(report_progress=True)
+        finally:
+            self._busy = False
 
     def remove_file(self, path: str) -> dict:
         self._files = [f for f in self._files if f != path]
@@ -175,6 +216,8 @@ class Api:
         return {"path": path}
 
     def build(self, settings: dict, output_path: str) -> dict:
+        if self._busy:
+            return {"success": False, "error": "Un'altra operazione è già in corso."}
         if not self._files:
             return {"success": False, "error": "Non ci sono immagini da unire."}
         if not output_path:
@@ -184,6 +227,7 @@ class Api:
             if self.window is not None:
                 self.window.evaluate_js(f"window.pdfMerger && window.pdfMerger.onBuildProgress({done},{total})")
 
+        self._busy = True
         try:
             result = pb.build_pdf(
                 [Path(p) for p in self._files],
@@ -194,6 +238,8 @@ class Api:
             return {"success": True, **result}
         except Exception as exc:
             return {"success": False, "error": str(exc)}
+        finally:
+            self._busy = False
 
     # ------------------------------------------------------------------
     # Misc
