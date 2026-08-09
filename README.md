@@ -142,6 +142,16 @@ perché su Linux, a differenza di Windows/macOS, non c'è un motore browser di
 sistema garantito). `build.sh` scarica `appimagetool` una tantum in
 `.build-tools/` (serve una connessione internet la prima volta).
 
+### Windows: "Windows ha protetto il tuo PC" / SmartScreen
+
+`PDFImageMerger.exe` non è firmato digitalmente (firmare un eseguibile
+richiede un certificato di code-signing a pagamento, ~70-500€/anno da
+un'autorità come DigiCert/Sectigo — non impostato per questo progetto), quindi
+Windows SmartScreen lo segnala come proveniente da un "produttore
+sconosciuto". Non è un problema del programma: è così per qualunque
+eseguibile non firmato. Per eseguirlo comunque: nella finestra di avviso,
+clicca **"Informazioni"** poi **"Esegui comunque"**.
+
 ## Struttura del progetto
 
 ```

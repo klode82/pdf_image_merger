@@ -54,7 +54,19 @@ INDEX_HTML = BASE_DIR / "frontend" / "index.html"
 # and Cocoa (macOS) both accept .png directly via their own icon classes.
 ICON_PATH = BASE_DIR / "assets" / ("icon.ico" if platform.system() == "Windows" else "icon.png")
 
-WINDOW_TITLE = "PDFImageMerger"
+
+def _read_version() -> str:
+    """VERSION at the project root is the single source of truth — bump it
+    there, nowhere else. Falls back quietly if it's ever missing so a
+    packaging slip doesn't crash the app over a cosmetic detail."""
+    try:
+        return (BASE_DIR / "VERSION").read_text(encoding="utf-8").strip()
+    except OSError:
+        return "0.0.0"
+
+
+VERSION = _read_version()
+WINDOW_TITLE = f"PDFImageMerger v{VERSION}"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif"}
 
 

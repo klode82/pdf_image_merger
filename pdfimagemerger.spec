@@ -10,6 +10,7 @@ import platform
 datas = [
     ("frontend", "frontend"),
     ("assets", "assets"),
+    ("VERSION", "."),
 ]
 binaries = []
 hiddenimports = []
