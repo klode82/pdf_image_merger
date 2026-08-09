@@ -1,227 +1,239 @@
+<div align="center">
+
+<img src="assets/icon.png" alt="PDFImageMerger icon" width="96" height="96" />
+
 # PDFImageMerger
 
-Tool desktop semplice e cross-platform (Windows / macOS / Linux) per unire le
-immagini di una cartella in un unico PDF. GUI con [pywebview](https://pywebview.flowrl.com/)
-+ [Franken UI](https://franken-ui.dev/) (vendorizzato localmente: l'app funziona anche offline).
+**Turn a folder of images into one PDF — fast, offline, and cross-platform.**
 
-## Funzionalità
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/klode82/pdf_image_merger/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)](#installation)
+[![pywebview](https://img.shields.io/badge/pywebview-%E2%89%A55.4-informational)](https://pywebview.flowrl.com/)
+[![Pillow](https://img.shields.io/badge/Pillow-%E2%89%A510.0-informational)](https://pillow.readthedocs.io/)
+[![pikepdf](https://img.shields.io/badge/pikepdf-%E2%89%A58.0-informational)](https://pikepdf.readthedocs.io/)
+[![UI: Franken UI](https://img.shields.io/badge/UI-Franken%20UI-informational)](https://franken-ui.dev/)
+[![Packaging: PyInstaller](https://img.shields.io/badge/packaging-PyInstaller-informational)](https://pyinstaller.org/)
 
-- Aggiunta immagini scegliendo una cartella, singoli file, **oppure trascinandoli
-  direttamente nella finestra** (anche una cartella intera).
-- Lista dei file da unire, riordinabile per drag & drop, con anteprima, dimensioni
-  e peso di ciascuna immagine; rimozione singola o svuotamento completo.
-- Formato pagina: A4 / Letter / Legal / A5, oppure "adatta all'immagine" (nessuna
-  pagina fissa, ogni immagine diventa una pagina delle sue stesse dimensioni).
-- Orientamento verticale/orizzontale (per i formati a pagina fissa).
-- Risoluzione (72 / 150 / 300 / 600 DPI) e livello di compressione (bassa/media/alta),
-  i due parametri che determinano davvero la dimensione finale del file.
-- **Stima della dimensione finale del PDF** prima di crearlo, calcolata comprimendo
-  davvero un campione delle immagini con le impostazioni scelte (non un numero a caso).
-- **Flag "Non modificare le immagini"**: disattiva formato pagina/orientamento/
-  risoluzione/compressione e usa ogni immagine esattamente come è — stessa
-  dimensione in pixel, zero perdita di qualità (vedi sotto come è implementato
-  davvero). File risultante più pesante, a fronte di zero modifiche.
-- Scelta del nome del file e della cartella di destinazione.
-- Barra di progresso durante la creazione; a fine lavoro, scorciatoie per aprire il
-  PDF o la cartella che lo contiene.
+</div>
 
-## Requisiti
+---
+
+## The problem
+
+If you've ever scanned a stack of documents, downloaded a comic/manga chapter
+as a folder of numbered `.jpg` files, or photographed a set of receipts, you've
+run into the same annoying gap: you have *images*, but you actually need *one
+PDF*. The usual options all fall short in some way:
+
+- General-purpose PDF suites are heavyweight installs for a one-off task.
+- Web-based "image to PDF" converters mean uploading your files to someone
+  else's server — a non-starter for anything private, and painfully slow for
+  a folder with hundreds of images.
+- Quick scripts and one-off tools tend to choke on large batches (holding
+  every page in memory at once), mangle EXIF-rotated photos, silently
+  re-compress images you wanted left alone, or simply break on Windows once a
+  folder's path gets long enough — which happens fast with deeply nested
+  archives.
+
+**PDFImageMerger** is a small, focused desktop tool that does exactly one job
+well: merge the images in a folder into a single, well-formed PDF — locally,
+quickly, and with real control over the size/quality tradeoff, instead of a
+black box.
+
+## What it does
+
+Point it at a folder (or drag images straight into the window), tune a
+handful of settings, and get a PDF. That's the whole idea — but the details
+are where it earns its keep:
+
+- **Three ways to add images** — pick a folder, pick individual files, or
+  drag & drop them straight into the window (a whole folder works too).
+- **Reorderable file list** with per-image thumbnail, dimensions, and file
+  size; drag rows to reorder, remove one, sort the list, or clear it.
+- **Page format control** — A4 / Letter / Legal / A5, or "fit to image" (no
+  fixed page — every image becomes a page sized to itself), plus
+  portrait/landscape orientation.
+- **Resolution & compression control** (72–600 DPI, low/medium/high) — the
+  two knobs that actually determine the final file size.
+- **A real size estimate before you commit** — it compresses a sample of the
+  actual images with the actual settings you picked and extrapolates; not a
+  guess.
+- **"Keep images unmodified" mode** — skip resizing and recompression
+  entirely. Where possible (plain JPEGs with a non-mirrored orientation),
+  the original file's bytes are embedded **byte-for-byte**, not
+  re-encoded — verified against real output, not just assumed. Everything
+  else still comes through losslessly, just not byte-identical.
+- **Handles large batches without exploding memory** — pages are built and
+  merged in small chunks sized to your settings, not held all in memory at
+  once. Tested at 800 images without breaking a sweat.
+- **Fully offline UI** — the frontend framework is vendored locally, no CDN,
+  no network required to run the app.
+- **Cross-platform** — runs from source on Windows, Linux, and macOS; ships
+  as a standalone single-file executable for Windows (`.exe`) and Linux
+  (`.AppImage`), no Python installation required on the machine that runs it.
+
+## Table of contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Building a standalone executable](#building-a-standalone-executable)
+- [Tech stack](#tech-stack)
+- [Architecture](#architecture)
+- [Under the hood](#under-the-hood)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Installation
 
 ```bash
+git clone https://github.com/klode82/pdf_image_merger.git
+cd pdf_image_merger
 pip install -r requirements.txt
 ```
 
-Questo basta su tutte le piattaforme. Su Windows e macOS pywebview usa i
-backend nativi (WebView2/pythonnet, WKWebView/pyobjc), che porta già con sé
-come dipendenze. **Su Linux non è incluso di default nessun backend**: il
-`requirements.txt` installa quindi anche l'extra `pywebview[qt]`
-(QtPy + PyQt6 + PyQt6-WebEngine) — pip puro, nessun pacchetto di sistema o
-`sudo` richiesto, funziona anche dentro un virtualenv isolato.
+That's the whole setup on **Windows** and **macOS** — pywebview pulls in its
+native backend dependencies (WebView2/pythonnet, WKWebView/pyobjc) on its own.
 
-**Alternativa Linux più leggera** (backend GTK di sistema invece di Qt via
-pip): richiede `sudo` e un venv creato con `--system-site-packages`, perché
-PyGObject si appoggia alle librerie GTK del sistema e non è "isolabile" in un
-venv puro:
+**Linux** doesn't ship a bundled backend by default, so `requirements.txt`
+also installs the `pywebview[qt]` extra there (QtPy + PyQt6 + PyQt6-WebEngine)
+— pure `pip`, no system packages or `sudo` required, and it works inside an
+isolated virtualenv. If you'd rather use a system GTK install instead, see
+[`docs/DEVELOPMENT_NOTES.md`](docs/DEVELOPMENT_NOTES.md) for that path.
 
-```bash
-sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.1
-python3 -m venv --system-site-packages .venv
-source .venv/bin/activate
-pip install pywebview Pillow   # senza l'extra [qt], qui basta GTK
-```
-
-## Avvio
+## Usage
 
 ```bash
 python main.py
 ```
 
-### Errore "You must have either QT or GTK ... installed"
+1. Add images: **Choose folder**, **Choose images**, or just drag files (or a
+   whole folder) into the window.
+2. Reorder/remove/sort as needed in the file list.
+3. Pick a page format, orientation, resolution and compression level — or
+   flip on **"Don't modify images"** to skip all of that and keep every
+   pixel exactly as it is.
+4. Check the live size estimate, name the output file, choose a destination.
+5. Click **Create PDF**. When it's done, jump straight to the file or its
+   folder — or hit **Create new** to start the next batch without losing your
+   settings.
 
-Significa che pywebview non ha trovato nessuno dei due backend — vedi la
-sezione Requisiti sopra e scegli una delle due strade per il tuo caso.
+## Building a standalone executable
 
-### La finestra si apre ma resta vuota (con "dma_buf" / "Compositor returned
-### null texture" in console)
+A distributable build that doesn't require Python on the machine that runs
+it, via [PyInstaller](https://pyinstaller.org/). Both scripts drive the same
+`pdfimagemerger.spec`, which adapts itself per OS.
 
-QtWebEngine (il motore Chromium usato dal backend Qt) non riesce ad accedere
-alla GPU — capita spesso su VM, sessioni remote o desktop Wayland. `main.py`
-imposta già `QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu` in automatico su Linux
-per evitarlo. Se dovesse ripresentarsi comunque, prova a forzare anche il
-backend di visualizzazione di Qt su X11 (utile sui sistemi Wayland):
+| Platform | Command | Output |
+|---|---|---|
+| Linux | `./build.sh` | `dist/PDFImageMerger-x86_64.AppImage` |
+| Windows (cmd.exe) | `build.cmd` | `dist\PDFImageMerger.exe` |
+| Windows (Git Bash) | `./build.sh` | `dist\PDFImageMerger.exe` |
 
-```bash
-QT_QPA_PLATFORM=xcb python main.py
-```
+> **PyInstaller does not cross-compile.** Run the build *on* each target OS
+> to get that OS's artifact — there's no supported way to produce the Windows
+> `.exe` from Linux (or vice versa) without something like Wine, which this
+> project deliberately avoids for being too fragile to support.
 
-### Windows: la finestra si blocca (rondella di caricamento) dopo averla spostata
+The Windows executable isn't code-signed (that requires a paid certificate),
+so Windows SmartScreen will flag it as coming from an "unknown publisher" —
+see [Troubleshooting](#troubleshooting).
 
-Causa individuata: pywebview espone a JS le funzioni Python leggendo per
-riflessione **tutti** gli attributi dell'oggetto `js_api` — nel nostro caso
-`Api`, che tiene un riferimento alla finestra stessa (`self.window`). Su
-Windows quella scansione può proseguire dentro `window.native` (il controllo
-WinForms/WebView2 vero e proprio) e finire in un loop infinito su
-`System.Drawing.Rectangle.Empty` (visibile in console come
-`AccessibilityObject.Bounds.Empty.Empty.Empty...` — bug noto e ancora aperto
-di pywebview, [issue #1815](https://github.com/r0x0r/pywebview/issues/1815)).
-Il problema si nota spostando la finestra perché WebView2 può generare un
-evento "NavigationCompleted" spurio in quel momento, che rilancia la
-scansione da capo.
+## Tech stack
 
-Già corretto in `api.py`: `set_window()` marca la finestra con
-`_serializable = False`, l'escape hatch che pywebview stesso offre per
-escludere un oggetto dalla scansione — verificato riproducendo la scansione
-reale di pywebview contro la nostra classe `Api` (nessun loop, tutti i
-metodi comunque esposti correttamente a JS). Se il problema persiste dopo
-aver aggiornato `api.py`, fammelo sapere.
+| Layer | Choice | Why |
+|---|---|---|
+| Desktop shell | [pywebview](https://pywebview.flowrl.com/) | Native window + OS webview control, no bundled browser engine required on Windows/macOS |
+| UI framework | [Franken UI](https://franken-ui.dev/) | HTML-first component library on UIkit 3 — vendored locally, so the UI works fully offline |
+| Image processing | [Pillow](https://pillow.readthedocs.io/) | Decoding, EXIF handling, resizing, thumbnailing |
+| PDF construction | [pikepdf](https://pikepdf.readthedocs.io/) (qpdf) | Low-level page/stream control — needed because Pillow's own PDF writer can't do what this app needs (see [Under the hood](#under-the-hood)) |
+| Packaging | [PyInstaller](https://pyinstaller.org/) | Standalone single-file executables for Windows and Linux |
 
-## Build standalone (AppImage / .exe)
-
-Un eseguibile distribuibile che non richiede Python installato su chi lo usa,
-via [PyInstaller](https://pyinstaller.org/). Stesso spec (`pdfimagemerger.spec`)
-per entrambi gli script: si adatta da solo in base al sistema operativo.
-
-**Linux:**
-
-```bash
-./build.sh
-```
-
-→ `dist/PDFImageMerger-x86_64.AppImage`, un singolo file eseguibile
-(`chmod +x` + doppio click o `./PDFImageMerger-*.AppImage`), niente da
-installare. Costruito e **verificato con un lancio reale** (finestra apparsa
-correttamente, nessun errore di packaging).
-
-**Windows — due modi equivalenti, scegli quello che preferisci:**
-
-```cmd
-build.cmd
-```
-nel prompt di Windows normale (cmd.exe), oppure `./build.sh` da
-[Git Bash](https://git-scm.com/downloads) se già lo usi. Entrambi lanciano lo
-stesso identico `pdfimagemerger.spec` con PyInstaller.
-
-→ `dist\PDFImageMerger.exe`, singolo file.
-
-⚠️ **PyInstaller non compila incrociato**: uno di questi due script va
-eseguito *su ciascun sistema* per produrre l'artefatto di quel sistema — una
-AppImage non si può generare da Windows né un .exe da Linux senza strumenti
-come Wine, che questo progetto deliberatamente non usa (troppo fragili da
-supportare per un tool "semplice"). La build Windows usa il backend nativo
-WebView2 (nessun Qt bundlato: eseguibile molto più leggero della AppImage) —
-i percorsi delle sue DLL sono stati inseriti nello spec leggendo il codice
-sorgente di pywebview (`webview/util.py:interop_dll_path`), ma **non è stata
-concretamente testata su una macchina Windows reale** in questo lavoro (non
-disponibile): se al primo avvio manca una DLL, la soluzione nota è copiare
-manualmente `WebView2Loader.dll` (si trova dentro
-`site-packages\webview\lib\runtimes\win-x64\native\` del tuo venv) accanto a
-`PDFImageMerger.exe`.
-
-La build Linux pesa ~260MB: quasi tutto è Chromium via QtWebEngine (bundlato
-perché su Linux, a differenza di Windows/macOS, non c'è un motore browser di
-sistema garantito). `build.sh` scarica `appimagetool` una tantum in
-`.build-tools/` (serve una connessione internet la prima volta).
-
-### Windows: "Windows ha protetto il tuo PC" / SmartScreen
-
-`PDFImageMerger.exe` non è firmato digitalmente (firmare un eseguibile
-richiede un certificato di code-signing a pagamento, ~70-500€/anno da
-un'autorità come DigiCert/Sectigo — non impostato per questo progetto), quindi
-Windows SmartScreen lo segnala come proveniente da un "produttore
-sconosciuto". Non è un problema del programma: è così per qualunque
-eseguibile non firmato. Per eseguirlo comunque: nella finestra di avviso,
-clicca **"Informazioni"** poi **"Esegui comunque"**.
-
-## Struttura del progetto
+## Architecture
 
 ```
 pdf_image_merger/
-├── main.py            # bootstrap pywebview + drag&drop nativo (path reali dei file)
-├── api.py             # ponte Python <-> JS (pywebview.api.*), stato della lista file
-├── pdf_builder.py      # logica pura immagini/PDF (nessuna dipendenza GUI, testabile a sé)
-├── build.sh            # build standalone: AppImage su Linux, .exe su Windows (via Git Bash)
-├── build.cmd           # come build.sh, ma per il prompt Windows nativo (cmd.exe)
-├── pdfimagemerger.spec # spec PyInstaller usato da build.sh
-├── assets/
-│   ├── generate_icon.py   # rigenera icon.png/icon.ico (nessun tool esterno)
-│   ├── icon.png
-│   └── icon.ico
-├── frontend/
-│   ├── index.html
-│   ├── app.js
-│   └── vendor/franken-ui/   # Franken UI vendorizzato: l'app non richiede internet
-└── requirements.txt
+├── main.py               # pywebview bootstrap + native OS drag & drop
+├── api.py                # Python <-> JS bridge (pywebview.api.*), file-list state
+├── pdf_builder.py         # pure image/PDF logic — no GUI dependency, independently testable
+├── build.sh / build.cmd   # standalone executable builds (Linux AppImage / Windows exe)
+├── pdfimagemerger.spec    # PyInstaller spec used by both build scripts
+├── VERSION                # single source of truth for the version shown in the window title
+├── assets/                # app icon + the script that generates it
+└── frontend/
+    ├── index.html, app.js
+    └── vendor/franken-ui/ # Franken UI, vendored — no CDN, works offline
 ```
 
-`pdf_builder.py` non ha alcuna dipendenza da pywebview: può essere importato e
-testato da solo (è quello che è stato fatto in fase di sviluppo per validare stime
-e geometria delle pagine con [Pillow](https://pillow.readthedocs.io/) e
-[pikepdf](https://pikepdf.readthedocs.io/)).
+`pdf_builder.py` has zero dependency on pywebview or any GUI code — it's
+importable and testable entirely on its own, which is exactly how its size
+estimates and page geometry were validated during development.
 
-## Batch grandi (centinaia di immagini)
+## Under the hood
 
-Il PDF viene costruito a blocchi (non tutte le pagine tenute in RAM insieme):
-la dimensione del blocco si adatta da sola in base a formato pagina e DPI
-scelti, per restare sempre entro qualche centinaio di MB di picco, poi i
-blocchi vengono uniti con [pikepdf](https://pikepdf.readthedocs.io/) (che
-lavora sui flussi JPEG già compressi, non sui pixel grezzi). Testato con 800
-immagini A4 a 300 DPI: picco di RAM ~550 MB invece delle decine di GB che
-richiederebbe tenere 800 pagine decodificate tutte insieme in memoria.
+A few decisions that shaped this app beyond "call Pillow and save":
 
-## Note tecniche
+- **Memory-safe large batches.** Pillow's own multi-page PDF save holds every
+  decoded page in RAM at once — fine for a handful of images, not for
+  hundreds at print resolution. Pages are built and merged in small chunks
+  (sized dynamically from the page resolution) instead, keeping peak memory
+  bounded regardless of batch size. Verified at 800 images: ~550 MB peak
+  instead of the tens of GB naive decoding would need.
+- **Byte-exact "keep it as-is" mode.** Pillow's PDF writer *always*
+  re-encodes RGB images as JPEG — there's no lossless path through that API
+  at all (confirmed by reading `PdfImagePlugin` itself). So "don't modify
+  images" bypasses Pillow's writer and builds PDF pages by hand with
+  pikepdf: a source JPEG's original bytes go in as a `DCTDecode` stream
+  completely untouched — not a re-encode, verified byte-for-byte against the
+  file on disk — with EXIF rotation compensated purely via a placement
+  matrix in the page's content stream (PDF viewers don't look at embedded
+  JPEGs' EXIF tags). Everything else falls back to a lossless (zlib) path.
+  Real result: 100 JPEGs at 1MB each stay ~100MB in the output PDF, not the
+  ~1.6GB a naive decode-and-recompress would produce.
+- **Windows long-path safety.** Windows' legacy file APIs cap paths around
+  260 characters — easy to hit with a few levels of descriptive subfolder
+  names (a comic/manga archive organized by series/volume/chapter is a
+  textbook case) even when no single name looks unreasonable. Every actual
+  file I/O call goes through the `\\?\` long-path prefix, which Windows
+  honors unconditionally.
+- **Native OS drag & drop.** Getting the *real filesystem path* of a dropped
+  file — not just its name, which is all a browser exposes by default —
+  uses pywebview's `window.dom` DOM-event bridge rather than plain HTML5
+  drag & drop.
 
-- Il drag & drop dal file manager del sistema operativo sfrutta l'API
-  `window.dom.document.events.drop` di pywebview (>=5.0), l'unico modo per
-  ottenere il **percorso reale** dei file rilasciati — il browser, per motivi
-  di sicurezza, non lo espone a JavaScript.
-- Le immagini vengono normalizzate (rotazione EXIF, trasparenza appiattita su
-  sfondo bianco) e compresse in JPEG dentro il PDF con la qualità scelta.
-- **"Non modificare le immagini" non usa il writer PDF di Pillow**: per le
-  immagini RGB, `Image.save(..., "PDF", ...)` di Pillow ricomprime *sempre* in
-  JPEG, qualunque cosa gli si passi — non esiste un modo lossless attraverso
-  quella API (verificato leggendo `PdfImagePlugin._write_image`: per il modo
-  "RGB" il filtro `DCTDecode`/JPEG è scelto senza condizioni). Per questo flag
-  le pagine vengono quindi costruite a mano con
-  [pikepdf](https://pikepdf.readthedocs.io/), con due percorsi:
-  - **JPEG con orientamento EXIF non specchiato (i casi reali di fotocamere/
-    telefoni)**: i byte del file originale vengono incorporati **letteralmente
-    invariati** come stream `DCTDecode` — non un ri-encode, il file stesso.
-    Verificato byte per byte (lo stream nel PDF == i byte del file su disco).
-    Una rotazione EXIF (90°/180°/270°, i tag 3/6/8) viene compensata solo con
-    una matrice di posizionamento nel content-stream della pagina — i PDF
-    non guardano i tag EXIF dei JPEG incorporati, quindi va gestita a parte;
-    le matrici sono state derivate e verificate rendendo davvero con
-    Ghostscript/Poppler un'immagine di test a 4 quadranti asimmetrici, non
-    solo calcolate a mano. Gli EXIF specchiati (tag 2/4/5/7, praticamente
-    inesistenti in natura) ricadono nel percorso sotto per non rischiare una
-    matrice di mirroring sbagliata.
-  - **Tutto il resto** (PNG/BMP/TIFF/WEBP/GIF, o quei rari JPEG specchiati):
-    decodifica una volta e i pixel finiscono in uno stream `FlateDecode`
-    (zlib, senza perdita) — zero perdita, ma il file cresce comunque, perché
-    Flate comprime il rumore fotografico molto peggio di JPEG.
+More background on specific bugs hunted down along the way — a pywebview
+reflection bug that could freeze the window on Windows, a Windows icon
+format gotcha, a Franken UI toggle-switch styling miss, and more — is in
+[`docs/DEVELOPMENT_NOTES.md`](docs/DEVELOPMENT_NOTES.md) (Italian, written
+during development; deep technical detail, GitHub-issue-linked where
+relevant).
 
-  Risultato concreto testato: 100 JPEG da 1MB ciascuno restano ~100MB nel PDF
-  (rapporto 1.03×, solo overhead di struttura PDF) — non i ~1.6GB che si
-  otterrebbero decodificando e ricomprimendo tutto in Flate. Elaborando
-  un'immagine alla volta, questa modalità non ha nemmeno bisogno del
-  chunking usato per le centinaia di immagini in modalità normale.
+## Troubleshooting
+
+**"You must have either QT or GTK installed" (Linux)** — pywebview couldn't
+find a usable backend; see [Installation](#installation).
+
+**Blank window / "dma_buf" errors in the console (Linux)** — QtWebEngine
+failing to get GPU acceleration, common on VMs and some Wayland setups.
+`main.py` already disables GPU compositing by default on Linux; if it still
+happens, try `QT_QPA_PLATFORM=xcb python main.py`.
+
+**"Windows protected your PC" / SmartScreen** — the executable isn't
+code-signed (that costs money); this is expected for any unsigned `.exe`,
+not a sign of anything wrong. Click **More info → Run anyway**.
+
+For anything more specific — including bugs that were found and fixed during
+development, with the full diagnosis — see
+[`docs/DEVELOPMENT_NOTES.md`](docs/DEVELOPMENT_NOTES.md).
+
+## Contributing
+
+Issues and pull requests are welcome. `pdf_builder.py` is fully decoupled
+from the GUI, so most logic changes (page geometry, size estimation, PDF
+construction) can be tested without touching pywebview at all.
+
+## License
+
+[MIT](LICENSE) © 2026 AurigaLAB
