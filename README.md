@@ -109,6 +109,12 @@ also installs the `pywebview[qt]` extra there (QtPy + PyQt6 + PyQt6-WebEngine)
 isolated virtualenv. If you'd rather use a system GTK install instead, see
 [`docs/DEVELOPMENT_NOTES.md`](docs/DEVELOPMENT_NOTES.md) for that path.
 
+<p align="center">
+  <a href="https://www.buymeacoffee.com/aurigalab" target="_blank" title="buymeacoffee">
+    <img src="https://iili.io/JoQ1MeS.md.png"  alt="buymeacoffee-yellow-badge">
+  </a>
+</p>
+
 ## Usage
 
 ```bash
@@ -243,3 +249,9 @@ construction) can be tested without touching pywebview at all.
 ## License
 
 [MIT](LICENSE) © 2026 AurigaLAB
+
+<p align="center">
+  <a href="https://www.buymeacoffee.com/aurigalab" target="_blank" title="buymeacoffee">
+    <img src="https://iili.io/JoQ1MeS.md.png"  alt="buymeacoffee-yellow-badge">
+  </a>
+</p>
