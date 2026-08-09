@@ -1,4 +1,8 @@
 <div align="center">
+  <img src="graphics/pdf_image_merger_cover.png" alt="PDFImageMerger Cover" />
+</div>
+
+<div align="center">
 
 <img src="assets/icon.png" alt="PDFImageMerger icon" width="96" height="96" />
 
