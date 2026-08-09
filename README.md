@@ -20,7 +20,7 @@
 
 <p align="center">
   <a href="https://www.buymeacoffee.com/aurigalab" target="_blank" title="buymeacoffee">
-    <img src="https://iili.io/JoQ1MeS.md.png"  alt="buymeacoffee-yellow-badge">
+    <img src="https://iili.io/JoQ1MeS.md.png"  alt="buymeacoffee-yellow-badge" style="width:160px">
   </a>
 </p>
 
