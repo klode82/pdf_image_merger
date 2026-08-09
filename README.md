@@ -18,6 +18,12 @@
 
 </div>
 
+<p align="center">
+  <a href="https://www.buymeacoffee.com/aurigalab" target="_blank" title="buymeacoffee">
+    <img src="https://iili.io/JoQ1MeS.md.png"  alt="buymeacoffee-yellow-badge">
+  </a>
+</p>
+
 ---
 
 ## The problem
